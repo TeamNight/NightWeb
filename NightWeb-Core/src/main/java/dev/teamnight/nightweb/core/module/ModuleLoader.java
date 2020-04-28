@@ -1,8 +1,12 @@
+/**
+ * Copyright (c) 2020 Jonas Müller, Jannik Müller
+ */
 package dev.teamnight.nightweb.core.module;
 
 import java.nio.file.Path;
 import java.util.regex.Pattern;
 
+import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightModule;
 
 public interface ModuleLoader {
@@ -16,7 +20,7 @@ public interface ModuleLoader {
 	 * @return Module if the loader found a module.xml 
 	 * 		and the Main Class implementing the Module interface
 	 */
-	public Module loadModule(Path path);
+	public NightModule loadModule(Path path) throws IllegalArgumentException;
 	
 	/**
 	 * Reads the module.xml descriptor file from the JAR archive or
@@ -25,7 +29,7 @@ public interface ModuleLoader {
 	 * @param Path to the module file or directory
 	 * @return ModuleMeta metadata for the Module
 	 */
-	public ModuleMetaFile getModuleMetaFile(Path path);
+	public ModuleMetaFile getModuleMetaFile(Path path) throws IllegalArgumentException, ModuleException;
 	
 	/**
 	 * Initializes the module by calling its main method: 
@@ -34,14 +38,7 @@ public interface ModuleLoader {
 	 * @param NightModule the module to init
 	 * <p>You should load the module in order to get the Module object</p>
 	 */
-	public void initModule(NightModule module);
-	
-	/**
-	 * Installs a module to the database and calling {@link dev.teamnight.nightweb.core.NightModule#onInstall(SessionFactory factory)}
-	 * 
-	 * @param Path to the module file or directory
-	 */
-	public void installModule(Path path);
+	public void initModule(NightModule module, Context ctx) throws IllegalArgumentException;
 	
 	/**
 	 * Returns the file patterns when this loader should be called

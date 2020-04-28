@@ -1,3 +1,6 @@
+/**
+ * Copyright (c) 2020 Jonas Müller, Jannik Müller
+ */
 package dev.teamnight.nightweb.core.module;
 
 import java.nio.file.Path;
@@ -11,7 +14,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class ModuleMetaFile {
 
 	private Path modulePath;
-	
+
 	@XmlElement
 	private String moduleIdentifier;
 	@XmlElement

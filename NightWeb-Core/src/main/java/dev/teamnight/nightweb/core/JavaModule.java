@@ -1,6 +1,13 @@
+/**
+ * Copyright (c) 2020 Jonas Müller, Jannik Müller
+ */
 package dev.teamnight.nightweb.core;
 
-import dev.teamnight.nightweb.core.module.ModuleContext;
+import javax.servlet.http.HttpServlet;
+
+import org.hibernate.Session;
+
+import dev.teamnight.nightweb.core.impl.ModuleContext;
 
 public abstract class JavaModule implements NightModule {
 
@@ -30,6 +37,37 @@ public abstract class JavaModule implements NightModule {
 	@Override
 	public Context getContext() {
 		return this.context;
+	}
+	
+
+	@Override
+	public void addServlet(HttpServlet servlet) throws IllegalArgumentException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void addServlet(HttpServlet servlet, String pathSpec) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void addServlet(Class<? extends HttpServlet> servlet) throws IllegalArgumentException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void addServlet(Class<? extends HttpServlet> servlet, String pathSpec) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public Session getDatabase() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 	
 	@Override

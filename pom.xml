@@ -13,6 +13,8 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>10</maven.compiler.source>
     <maven.compiler.target>10</maven.compiler.target>
+    <dependencies.dir>${project.basedir}/build/libraries</dependencies.dir>
+    <output.dir>${project.basedir}/build</output.dir>
   </properties>
 
   <dependencies>
@@ -67,6 +69,11 @@
 	    <artifactId>jaxb-impl</artifactId>
 	    <version>2.3.1</version>
 	</dependency>
+	<dependency>
+  		<groupId>mysql</groupId>
+  		<artifactId>mysql-connector-java</artifactId>
+  		<version>8.0.20</version>
+  	</dependency>
   </dependencies>
 
   <build>
@@ -81,18 +88,36 @@
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.8.0</version>
+          <configuration>
+               <release>9</release>
+          </configuration>
         </plugin>
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>2.22.1</version>
+          <configuration>
+              <argLine>--add-modules java.xml.bind</argLine>
+          </configuration>
         </plugin>
         <plugin>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>3.0.2</version>
+          <version>3.1.2</version>
+          <configuration>
+              <outputDirectory>${output.dir}</outputDirectory>
+          </configuration>
+        </plugin>
+        <plugin>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>2.6</version>
         </plugin>
         <plugin>
           <artifactId>maven-install-plugin</artifactId>
           <version>2.5.2</version> 
+        </plugin>
+        <plugin>
+        	<groupId>org.moditect</groupId>
+    		<artifactId>moditect-maven-plugin</artifactId>
+    		<version>1.0.0.Beta2</version>
         </plugin>
       </plugins>
     </pluginManagement>

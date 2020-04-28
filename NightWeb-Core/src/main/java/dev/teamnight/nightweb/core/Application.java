@@ -1,3 +1,6 @@
+/**
+ * Copyright (c) 2020 Jonas Müller, Jannik Müller
+ */
 package dev.teamnight.nightweb.core;
 
 import javax.servlet.http.HttpServlet;
@@ -9,6 +12,7 @@ public abstract class Application implements NightModule {
 	// TODO Implement class
 	
 	private ApplicationContext context;
+	private boolean enabled;
 
 	public abstract void init(ApplicationContext ctx);
 	
@@ -21,6 +25,7 @@ public abstract class Application implements NightModule {
 		this.context = (ApplicationContext) ctx;
 		
 		this.init(this.context);
+		this.enabled = true;
 	}
 
 	@Override
@@ -30,10 +35,12 @@ public abstract class Application implements NightModule {
 
 	@Override
 	public void addServlet(HttpServlet servlet) {
+		this.context.registerServlet(servlet);
 	}
 
 	@Override
 	public void addServlet(HttpServlet servlet, String pathInfo) {
+		this.context.registerServlet(servlet, pathInfo);
 	}
 
 	@Override
@@ -47,6 +54,11 @@ public abstract class Application implements NightModule {
 	@Override
 	public Session getDatabase() {
 		return null;
+	}
+
+	@Override
+	public boolean isEnabled() {
+		return this.enabled;
 	}
 
 }

@@ -1,29 +1,94 @@
+/**
+ * Copyright (c) 2020 Jonas Müller, Jannik Müller
+ */
 package dev.teamnight.nightweb.core.module;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
+import dev.teamnight.nightweb.core.Application;
+import dev.teamnight.nightweb.core.ApplicationContext;
 import dev.teamnight.nightweb.core.NightModule;
+import dev.teamnight.nightweb.core.NightWebCore;
+import dev.teamnight.nightweb.core.impl.ModuleContext;
 
 public class ModuleManagerImpl implements ModuleManager {
 
-	private List<ModuleHolder> loadedModules;
+	private NightWebCore core;
+
+	private List<ModuleHolder> loadedModules = new ArrayList<ModuleHolder>();
 	
-	private Map<Pattern, ModuleLoader> moduleLoaders;
+	private Map<Pattern, ModuleLoader> moduleLoaders = new HashMap<Pattern, ModuleLoader>();
+	
+	private List<LoadCustomizer> loadCustomizers = new ArrayList<LoadCustomizer>();
+	
+	public ModuleManagerImpl(NightWebCore web) {
+		this.core = web;
+	}
 	
 	@Override
-	public void loadModules(Path modulesDir) {
-		// TODO Auto-generated method stub
+	public void loadModules(Path modulesDir) throws IllegalArgumentException {
+		// TODO Implement dependency loading
+		
+		if(!Files.isDirectory(modulesDir)) {
+			throw new IllegalArgumentException(modulesDir.toAbsolutePath() + " is not a directory.");
+		}
+		
+		List<Path> moduleFiles = null;
+		try {
+			moduleFiles = Files.list(modulesDir).collect(Collectors.toList());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		if(moduleFiles == null) {
+			return;
+		}
+		
+		for(Path path : moduleFiles) {
+			this.loadModule(path);
+		}
 	}
 
 	@Override
-	public void loadModule(Path path) {
-		// TODO Auto-generated method stub
+	public void loadModule(Path path) throws ModuleException {
+		String filename = path.getFileName().toString();
+		ModuleLoader loader = null;
 		
+		for(Pattern p : moduleLoaders.keySet()) {
+			Matcher matcher = p.matcher(filename);
+			
+			if(matcher.find()) {
+				loader = moduleLoaders.get(p);
+			}
+		}
+		
+		if(loader == null) {
+			throw new ModuleException("Unable to get ModuleLoader for " + path.toAbsolutePath());
+		}
+		
+		NightModule module = loader.loadModule(path);
+		ModuleMetaFile mf = loader.getModuleMetaFile(path);
+		
+		ModuleHolder holder = new ModuleHolder();
+		holder.setModule(module);
+		holder.setMetaFile(mf);
+		
+		for(LoadCustomizer customizer : this.loadCustomizers) {
+			customizer.customize(module);
+		}
+		
+		this.loadedModules.add(holder);
 	}
 
 	@Override
@@ -82,6 +147,138 @@ public class ModuleManagerImpl implements ModuleManager {
 	public boolean isModuleEnabled(NightModule module) {
 		return module.isEnabled();
 	}
+	
+
+	@Override
+	public void enableModules() throws ModuleException, UnknownDependencyException {
+		List<Application> applications = this.loadedModules.stream()
+				.map((holder) -> holder.getModule())
+				.filter((module) -> module instanceof Application)
+				.map((module) -> (Application)module)
+				.collect(Collectors.toList());
+		
+		List<NightModule> modules = this.loadedModules.stream()
+				.map((holder) -> holder.getModule())
+				.filter((module) -> !(module instanceof Application))
+				.collect(Collectors.toList());
+		
+		for(Application application : applications) {
+			this.enableModule(application);
+		}
+		
+		for(NightModule module : modules) {
+			this.enableModule(module);
+		}
+	}
+
+	@Override
+	public void enableModule(NightModule module) throws ModuleException, UnknownDependencyException {
+		if(module.isEnabled()) {
+			return;
+		}
+		
+		ModuleHolder holder = this.loadedModules.stream().filter((mh) -> mh.getModule() == module).findFirst().orElse(null);
+		
+		if(holder == null) {
+			throw new ModuleException("Module was removed?" + module.getClass().getCanonicalName());
+		}
+		
+		List<String> dependencies = holder.getMetaFile().getDependencies();
+		List<String> enabledDependencies = new ArrayList<String>();
+		
+		for(String dependencyName : dependencies) {
+			Optional<NightModule> dependency = this.loadedModules.stream()
+					.filter((mh) -> mh.getMetaFile().getModuleIdentifier().equals(dependencyName))
+					.map((mh) -> mh.getModule())
+					.findFirst();
+			
+			if(dependency.isPresent()) {
+				if(dependency.get() instanceof Application) {
+					
+				}
+				
+				this.enableModule(dependency.get());
+			} else {
+				throw new UnknownDependencyException("Dependency " + dependencyName + " was not found. Please add it to the modules directory.");
+			}
+			
+			enabledDependencies.add(dependencyName);
+		}
+		
+		if(dependencies.size() != enabledDependencies.size()) {
+			throw new ModuleException("Unable to enable all dependencies of " + holder.getMetaFile().getModuleIdentifier());
+		}
+		
+		if(!(module instanceof Application)) {
+			Application parentApplication = this.loadedModules.stream()
+					.filter((mh) -> dependencies.contains(mh.getMetaFile().getModuleIdentifier()))
+					.map((mh) -> mh.getModule())
+					.filter((mod) -> mod instanceof Application)
+					.map((mod) -> (Application)mod)
+					.findFirst()
+					.orElse(null);
+			
+			if(parentApplication == null) {
+				throw new ModuleException("A module needs at least one application as dependency. Conflicting module is " + holder.getMetaFile().getModuleIdentifier());
+			}
+			
+			ApplicationContext appCtx = (ApplicationContext) parentApplication.getContext();
+			
+			ModuleContext ctx = new ModuleContext(appCtx);
+			
+			module.init(ctx);
+		} else {
+			Application app = (Application) module;
+			
+			ApplicationContext ctx = this.core.getServer().getContext(app);
+			
+			app.init(ctx);
+		}
+	}
+	
+	@Override
+	public void disableModule(NightModule module) {
+		// TODO Implement
+		throw new UnsupportedOperationException("Disabling modules is not implemented yet.");
+	}
+	
+	@Override
+	public void disableModules() {
+		//TODO Implement
+		throw new UnsupportedOperationException("Disabling modules is not implemented yet.");
+	}
+	
+	@Override
+	public Application getApplicationByName(String name) {
+		for(ModuleHolder holder : this.loadedModules) {
+			if(holder.getMetaFile().getModuleName().equals(name)) {
+				if(holder.getModule() instanceof Application) {
+					return (Application) holder.getModule();
+				}
+			}
+		}
+		return null;
+	}
+	
+	@Override
+	public Application getApplicationByIdentifier(String identifier) {
+		for(ModuleHolder holder : this.loadedModules) {
+			if(holder.getMetaFile().getModuleIdentifier().equals(identifier)) {
+				if(holder.getModule() instanceof Application) {
+					return (Application) holder.getModule();
+				}
+			}
+		}
+		return null;
+	}
+	
+	@Override
+	public List<Application> getApplications() {
+		return this.loadedModules.stream()
+				.filter((holder) -> holder.getModule() instanceof Application)
+				.map((holder) -> (Application)holder.getModule())
+				.collect(Collectors.toList());
+	}
 
 	@Override
 	public void registerLoader(Class<? extends ModuleLoader> loader) throws IllegalArgumentException {
@@ -101,6 +298,11 @@ public class ModuleManagerImpl implements ModuleManager {
 		for(Pattern pattern : obj.getFilePatterns()) {
 			this.moduleLoaders.put(pattern, obj);
 		}
+	}
+
+	@Override
+	public void registerCustomizer(LoadCustomizer customizer) throws IllegalArgumentException {
+		this.loadCustomizers.add(customizer);
 	}
 
 }

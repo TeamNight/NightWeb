@@ -9,10 +9,15 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
+/**
+ * @author Jonas
+ *
+ */
+
 @Entity
-@Table(name = "modules")
-public class ModuleData {
-	
+@Table(name = "applications")
+public class ApplicationData {
+
 	@Id
 	@GeneratedValue
 	@Column(name = "id", nullable = false)
@@ -27,21 +32,10 @@ public class ModuleData {
 	@Column(name = "version")
 	private String version;
 	
-	@Column(name = "path")
-	private String path;
+	@Column(name = "contextPath")
+	private String contextPath;
 	
-	@Column(name = "enabled", nullable = false)
-	private boolean enabled;
-	
-	public ModuleData() {}
-	
-	public ModuleData(long id, String identifier) {
-		this.id = id;
-		this.name = identifier;
-		this.identifier = identifier;
-		this.version = "0.0.0";
-		this.enabled = false;
-	}
+	public ApplicationData() {}
 
 	/**
 	 * @return the id
@@ -72,17 +66,10 @@ public class ModuleData {
 	}
 
 	/**
-	 * @return the path
+	 * @return the contextPath
 	 */
-	public String getPath() {
-		return path;
-	}
-
-	/**
-	 * @return the enabled
-	 */
-	public boolean isEnabled() {
-		return enabled;
+	public String getContextPath() {
+		return contextPath;
 	}
 
 	/**
@@ -114,17 +101,9 @@ public class ModuleData {
 	}
 
 	/**
-	 * @param path the path to set
+	 * @param contextPath the contextPath to set
 	 */
-	public void setPath(String path) {
-		this.path = path;
+	public void setContextPath(String contextPath) {
+		this.contextPath = contextPath;
 	}
-
-	/**
-	 * @param enabled the enabled to set
-	 */
-	public void setEnabled(boolean enabled) {
-		this.enabled = enabled;
-	}
-
 }

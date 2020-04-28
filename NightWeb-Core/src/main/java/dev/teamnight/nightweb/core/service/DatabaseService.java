@@ -1,3 +1,6 @@
+/**
+ * Copyright (c) 2020 Jonas Müller, Jannik Müller
+ */
 package dev.teamnight.nightweb.core.service;
 
 import java.io.Serializable;
@@ -23,6 +26,11 @@ public abstract class DatabaseService<T> implements Service<T> {
 	
 	@SuppressWarnings("unchecked")
 	public DatabaseService(SessionFactory factory) {
+		//TODO remove comment
+//		if(factory == null) {
+//			throw new IllegalArgumentException("factory can not be null");
+//		}
+		
 		this.type = (Class<T>) ((ParameterizedType)getClass().getGenericSuperclass()).getActualTypeArguments()[0];
 		this.factory = factory;
 	}
