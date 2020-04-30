@@ -15,6 +15,8 @@ public abstract class JavaModule implements NightModule {
 	
 	private boolean enabled;
 	private ModuleContext context;
+	
+	private String identifier;
 
 	public abstract void init(ModuleContext ctx);
 	
@@ -73,6 +75,19 @@ public abstract class JavaModule implements NightModule {
 	@Override
 	public boolean isEnabled() {
 		return this.enabled;
+	}
+	
+	
+	@Override
+	public String getIdentifier() {
+		return this.identifier;
+	}
+	
+	@Override
+	public void setIdentifier(String identifier) {
+		if(this.identifier == null) {
+			this.identifier = identifier;
+		}
 	}
 	
 }

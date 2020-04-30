@@ -16,14 +16,23 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import dev.teamnight.nightweb.core.Application;
 import dev.teamnight.nightweb.core.ApplicationContext;
 import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.NightWebCore;
+import dev.teamnight.nightweb.core.entities.ModuleData;
 import dev.teamnight.nightweb.core.impl.ModuleContext;
+import dev.teamnight.nightweb.core.impl.NightWebCoreImpl;
+import dev.teamnight.nightweb.core.service.ApplicationService;
+import dev.teamnight.nightweb.core.service.ModuleService;
 
 public class ModuleManagerImpl implements ModuleManager {
 
+	private static Logger LOGGER = LogManager.getLogger();
+	
 	private NightWebCore core;
 
 	private List<ModuleHolder> loadedModules = new ArrayList<ModuleHolder>();
@@ -62,14 +71,20 @@ public class ModuleManagerImpl implements ModuleManager {
 
 	@Override
 	public void loadModule(Path path) throws ModuleException {
+		//TODO Applications can not have dependencies
+		
+		LOGGER.info("Loading module at " + path);
 		String filename = path.getFileName().toString();
 		ModuleLoader loader = null;
 		
 		for(Pattern p : moduleLoaders.keySet()) {
 			Matcher matcher = p.matcher(filename);
 			
+			LOGGER.debug("Current pattern: " + p.pattern());
+			
 			if(matcher.find()) {
 				loader = moduleLoaders.get(p);
+				LOGGER.debug("Found moduleLoader for " + path + ": " + loader.getClass().getCanonicalName());
 			}
 		}
 		
@@ -77,8 +92,13 @@ public class ModuleManagerImpl implements ModuleManager {
 			throw new ModuleException("Unable to get ModuleLoader for " + path.toAbsolutePath());
 		}
 		
+		LOGGER.debug("Loading module from file " + path);
 		NightModule module = loader.loadModule(path);
+		LOGGER.debug("Getting meta file");
 		ModuleMetaFile mf = loader.getModuleMetaFile(path);
+		
+		//Set identifier is important
+		module.setIdentifier(mf.getModuleIdentifier());
 		
 		ModuleHolder holder = new ModuleHolder();
 		holder.setModule(module);
@@ -87,6 +107,8 @@ public class ModuleManagerImpl implements ModuleManager {
 		for(LoadCustomizer customizer : this.loadCustomizers) {
 			customizer.customize(module);
 		}
+		
+		LOGGER.info("Loaded module >> " + mf.getModuleIdentifier());
 		
 		this.loadedModules.add(holder);
 	}
@@ -172,10 +194,12 @@ public class ModuleManagerImpl implements ModuleManager {
 	}
 
 	@Override
-	public void enableModule(NightModule module) throws ModuleException, UnknownDependencyException {
+	public boolean enableModule(NightModule module) throws ModuleException, UnknownDependencyException {
 		if(module.isEnabled()) {
-			return;
+			return true;
 		}
+		
+		LOGGER.debug("Enabling module (debug): " + module.getClass().getCanonicalName());
 		
 		ModuleHolder holder = this.loadedModules.stream().filter((mh) -> mh.getModule() == module).findFirst().orElse(null);
 		
@@ -183,21 +207,39 @@ public class ModuleManagerImpl implements ModuleManager {
 			throw new ModuleException("Module was removed?" + module.getClass().getCanonicalName());
 		}
 		
+		LOGGER.info("Enabling module >> " + holder.getMetaFile().getModuleIdentifier());
+		
+		ModuleService modService = this.core.getServiceManager().getService(ModuleService.class);
+		ModuleData data = modService.getByIdentifier(holder.getMetaFile().getModuleIdentifier());
+		
+		if(data == null) {
+			LOGGER.warn("Could not enable module " + holder.getMetaFile().getModuleIdentifier() + ". Module is not installed.");
+			return false;
+			//TODO add boolean in order to check if module was actually enabled
+		}
+		
+		if(!data.isEnabled()) {
+			LOGGER.warn("Could not enable module " + holder.getMetaFile().getModuleIdentifier() + ". Module is not enabled in DB.");
+			return false;
+		}
+		
 		List<String> dependencies = holder.getMetaFile().getDependencies();
 		List<String> enabledDependencies = new ArrayList<String>();
 		
+		LOGGER.debug("Resolving dependencies");
 		for(String dependencyName : dependencies) {
+			LOGGER.debug("Dependency to be resolved: " + dependencyName);
 			Optional<NightModule> dependency = this.loadedModules.stream()
-					.filter((mh) -> mh.getMetaFile().getModuleIdentifier().equals(dependencyName))
-					.map((mh) -> mh.getModule())
+					.filter(mh -> mh.getMetaFile().getModuleIdentifier().equals(dependencyName))
+					.map(mh -> mh.getModule())
 					.findFirst();
 			
 			if(dependency.isPresent()) {
-				if(dependency.get() instanceof Application) {
-					
-				}
+				boolean enabledDep = this.enableModule(dependency.get());
 				
-				this.enableModule(dependency.get());
+				if(!enabledDep) {
+					break;
+				}
 			} else {
 				throw new UnknownDependencyException("Dependency " + dependencyName + " was not found. Please add it to the modules directory.");
 			}
@@ -211,10 +253,10 @@ public class ModuleManagerImpl implements ModuleManager {
 		
 		if(!(module instanceof Application)) {
 			Application parentApplication = this.loadedModules.stream()
-					.filter((mh) -> dependencies.contains(mh.getMetaFile().getModuleIdentifier()))
-					.map((mh) -> mh.getModule())
-					.filter((mod) -> mod instanceof Application)
-					.map((mod) -> (Application)mod)
+					.filter(mh -> dependencies.contains(mh.getMetaFile().getModuleIdentifier()))
+					.map(mh -> mh.getModule())
+					.filter(mod -> mod instanceof Application)
+					.map(mod -> (Application)mod)
 					.findFirst()
 					.orElse(null);
 			
@@ -227,12 +269,22 @@ public class ModuleManagerImpl implements ModuleManager {
 			ModuleContext ctx = new ModuleContext(appCtx);
 			
 			module.init(ctx);
+			LOGGER.info("Enabled module >> " + holder.getMetaFile().getModuleIdentifier());
+			return true;
 		} else {
 			Application app = (Application) module;
 			
-			ApplicationContext ctx = this.core.getServer().getContext(app);
+			ApplicationContext ctx = null;
+			try {
+				ctx = this.core.getServer().getContext(app);
+			} catch(IllegalArgumentException e) {
+				e.printStackTrace();
+				return false;
+			}
 			
 			app.init(ctx);
+			LOGGER.info("Enabled application >> " + holder.getMetaFile().getModuleIdentifier());
+			return true;
 		}
 	}
 	
@@ -286,6 +338,7 @@ public class ModuleManagerImpl implements ModuleManager {
 		
 		try {
 			obj = loader.getConstructor().newInstance();
+			LOGGER.debug("Registering ModuleLoader: " + loader.getCanonicalName());
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
 				| NoSuchMethodException | SecurityException e) {
 			if(e instanceof NoSuchMethodException) {
@@ -302,7 +355,50 @@ public class ModuleManagerImpl implements ModuleManager {
 
 	@Override
 	public void registerCustomizer(LoadCustomizer customizer) throws IllegalArgumentException {
+		LOGGER.debug("Registering customizer: " + (customizer.getClass().getCanonicalName() != null 
+				? customizer.getClass().getCanonicalName() 
+						: customizer.getClass().getSimpleName()));
 		this.loadCustomizers.add(customizer);
+	}
+
+	@Override
+	public void installModule(NightModule module) {
+		LOGGER.debug("Checking for ModuleService");
+		ModuleService service = this.core.getServiceManager().getService(ModuleService.class);
+		
+		if(service == null) {
+			throw new IllegalArgumentException("Modules can only be installed after the server was initialized");
+		}
+		
+		LOGGER.debug("Checking for loaded module");
+		ModuleHolder holder = this.loadedModules.stream()
+				.filter(mh -> mh.getMetaFile().getModuleIdentifier().equals(module.getIdentifier()))
+				.findFirst()
+				.orElse(null);
+		
+		if(holder == null) {
+			throw new IllegalArgumentException("Module " + module.getClass().getCanonicalName() + " is not loaded. Modules that are going to installed need to be loaded");
+		}
+		
+		LOGGER.info("Installing module >> " + module.getIdentifier());
+		
+		LOGGER.debug("Checking for already installed module");
+		ModuleData testData = service.getByIdentifier(module.getIdentifier());
+		
+		if(testData != null) {
+			throw new IllegalArgumentException("Module " + module.getIdentifier() + " is already installed");
+		}
+		
+		LOGGER.debug("Creating moduleData object and saving it");
+		ModuleData data = new ModuleData();
+		data.setIdentifier(holder.getMetaFile().getModuleIdentifier());
+		data.setName(holder.getMetaFile().getModuleName());
+		data.setVersion(holder.getMetaFile().getVersion());
+		data.setPath(NightWebCoreImpl.WORKING_DIR.relativize(holder.getMetaFile().getModulePath()).toString());
+		data.setEnabled(true);
+		
+		service.save(data);
+		LOGGER.info("Installed module >> " + data.getIdentifier());
 	}
 
 }

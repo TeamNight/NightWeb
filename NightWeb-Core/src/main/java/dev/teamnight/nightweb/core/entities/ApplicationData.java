@@ -3,10 +3,12 @@
  */
 package dev.teamnight.nightweb.core.entities;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
 /**
@@ -26,23 +28,19 @@ public class ApplicationData {
 	@Column(name = "name")
 	private String name;
 	
-	@Column(name = "identifier", nullable = false)
+	@Column(name = "identifier", nullable = false, unique = true)
 	private String identifier;
 	
 	@Column(name = "version")
 	private String version;
 	
-	@Column(name = "contextPath")
+	@Column(name = "contextPath", nullable = false)
 	private String contextPath;
 	
+	@OneToOne(cascade = CascadeType.ALL, optional = false)
+	private ModuleData moduleData;
+	
 	public ApplicationData() {}
-
-	/**
-	 * @return the id
-	 */
-	public long getId() {
-		return id;
-	}
 
 	/**
 	 * @return the name
@@ -71,12 +69,12 @@ public class ApplicationData {
 	public String getContextPath() {
 		return contextPath;
 	}
-
+	
 	/**
-	 * @param id the id to set
+	 * @return the moduleData
 	 */
-	public void setId(long id) {
-		this.id = id;
+	public ModuleData getModuleData() {
+		return moduleData;
 	}
 
 	/**
@@ -105,5 +103,17 @@ public class ApplicationData {
 	 */
 	public void setContextPath(String contextPath) {
 		this.contextPath = contextPath;
+	}
+	
+	/**
+	 * @param moduleData the moduleData to set
+	 */
+	public void setModuleData(ModuleData moduleData) {
+		this.moduleData = moduleData;
+	}
+	
+	@Override
+	public String toString() {
+		return String.format("ApplicationData(id=%s, identifier=%s, version=%s)", this.id, this.identifier, this.version);
 	}
 }

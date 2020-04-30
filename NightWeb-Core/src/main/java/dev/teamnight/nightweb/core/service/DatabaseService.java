@@ -182,4 +182,8 @@ public abstract class DatabaseService<T> implements Service<T> {
 		
 		return count;
 	}
+	
+	protected SessionFactory getSessionFactory() {
+		return this.factory;
+	}
 }

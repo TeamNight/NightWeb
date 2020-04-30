@@ -11,8 +11,8 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>10</maven.compiler.source>
-    <maven.compiler.target>10</maven.compiler.target>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
     <dependencies.dir>${project.basedir}/build/libraries</dependencies.dir>
     <output.dir>${project.basedir}/build</output.dir>
   </properties>
@@ -47,12 +47,12 @@
   	<dependency>
   		<groupId>org.eclipse.jetty</groupId>
   		<artifactId>jetty-server</artifactId>
-  		<version>9.4.6.v20170531</version>
+  		<version>9.4.17.v20190418</version>
   	</dependency>
   	<dependency>
   		<groupId>org.eclipse.jetty</groupId>
   		<artifactId>jetty-servlet</artifactId>
-  		<version>9.4.6.v20170531</version>
+  		<version>9.4.19.v20190610</version>
   	</dependency>
   	<dependency>
         <groupId>com.google.guava</groupId>
@@ -73,6 +73,11 @@
   		<groupId>mysql</groupId>
   		<artifactId>mysql-connector-java</artifactId>
   		<version>8.0.20</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>javax.persistence</groupId>
+  		<artifactId>javax.persistence-api</artifactId>
+  		<version>2.2</version>
   	</dependency>
   </dependencies>
 
@@ -125,5 +130,6 @@
   <modules>
     <module>NightWeb-Core</module>
 	<module>BBCodeParser</module>
+	<module>NightWeb-Forum</module>
   </modules>
 </project>

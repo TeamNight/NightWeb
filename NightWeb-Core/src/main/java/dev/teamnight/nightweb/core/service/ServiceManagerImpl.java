@@ -11,10 +11,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
 import org.hibernate.SessionFactory;
 
 public class ServiceManagerImpl implements ServiceManager {
-
+	
 	private SessionFactory sessionFactory;
 	
 	private Map<String, Service<?>> services = new HashMap<String, Service<?>>();
@@ -25,11 +26,13 @@ public class ServiceManagerImpl implements ServiceManager {
 	
 	@Override
 	public void register(Service<?> service) {
+		LogManager.getLogger().info("Registering service >> " + service.getClass().getCanonicalName());
 		this.services.put(service.getClass().getCanonicalName(), service);
 	}
 
 	@Override
 	public void register(Class<? extends Service<?>> service) throws IllegalArgumentException {
+		LogManager.getLogger().info("Registering service >> " + service.getCanonicalName());
 		Constructor<?> cs;
 		
 		try {

@@ -3,10 +3,13 @@
  */
 package dev.teamnight.nightweb.core.entities;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name = "configuration")
+@XmlAccessorType(XmlAccessType.FIELD)
 public class XmlConfiguration {
 
 	@XmlElement(name="developerMode")

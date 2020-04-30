@@ -26,6 +26,21 @@ public interface NightModule {
 	public void init(Context ctx);
 	
 	/**
+	 * The identifier for the module
+	 * @return String identifier
+	 */
+	public String getIdentifier();
+	
+	/**
+	 * Sets the identifier
+	 * 
+	 * <p>Warning: Can only be used one time</p>
+	 * 
+	 * @param identifier
+	 */
+	public void setIdentifier(String identifier);
+	
+	/**
 	 * @return {@link dev.teamnight.nightweb.core.Context} the Context
 	 */
 	public Context getContext();

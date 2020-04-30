@@ -6,14 +6,17 @@ package dev.teamnight.nightweb.core.module;
 import java.nio.file.Path;
 import java.util.List;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name = "module")
+@XmlAccessorType(XmlAccessType.FIELD)
 public class ModuleMetaFile {
 
-	private Path modulePath;
+	private transient Path modulePath;
 
 	@XmlElement
 	private String moduleIdentifier;

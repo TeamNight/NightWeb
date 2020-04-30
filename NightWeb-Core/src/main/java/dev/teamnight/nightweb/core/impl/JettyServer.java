@@ -4,6 +4,7 @@
 package dev.teamnight.nightweb.core.impl;
 
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
@@ -14,17 +15,24 @@ import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.SecuredRedirectHandler;
+import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
+import org.hibernate.SessionFactory;
 
 import dev.teamnight.nightweb.core.Application;
 import dev.teamnight.nightweb.core.ApplicationContext;
+import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.Server;
+import dev.teamnight.nightweb.core.entities.ApplicationData;
 import dev.teamnight.nightweb.core.entities.XmlConfiguration;
+import dev.teamnight.nightweb.core.service.ApplicationService;
 
 public class JettyServer implements Server {
 
+	private static Logger LOGGER = LogManager.getLogger();
+	
 	private org.eclipse.jetty.server.Server server;
 	
 	private ContextHandlerCollection servletContextHandlers = new ContextHandlerCollection();
@@ -32,6 +40,8 @@ public class JettyServer implements Server {
 	private XmlConfiguration conf;
 	
 	private NightWebCore core;
+
+	private SessionFactory sessionFactory;
 	
 	public JettyServer(NightWebCore core, XmlConfiguration conf) {
 		this.core = core;
@@ -60,10 +70,11 @@ public class JettyServer implements Server {
 		
 		//SSL Support
 		if(this.isSSLEnabled()) {
+			LOGGER.info("Using SSL supprto");
 			HttpConfiguration httpsConf = new HttpConfiguration(httpConf);
 			httpsConf.addCustomizer(new SecureRequestCustomizer());
 			
-			SslContextFactory sslContextFactory = new SslContextFactory();
+			SslContextFactory sslContextFactory = new SslContextFactory.Server();
 			sslContextFactory.setKeyStorePath(conf.getKeystoreFile());
 			sslContextFactory.setKeyStorePassword(conf.getKeystorePassword());
 			
@@ -95,10 +106,28 @@ public class JettyServer implements Server {
 
 	@Override
 	public void start() {
-		LogManager.getLogger().info("Starting with " + this.servletContextHandlers.getHandlers().length + " ContextHandlers");
+		LOGGER.info("Starting with "
+				+ (this.servletContextHandlers.getHandlers() != null ? this.servletContextHandlers.getHandlers().length : 0)
+				+ " ContextHandlers");
 		
 		try {
 			this.server.start();
+			
+			LOGGER.info("Press CTRL+C to stop the server");
+			Runtime.getRuntime().addShutdownHook(new Thread() {
+				@Override
+				public void run() {
+					JettyServer.LOGGER.info("Shutting down...");
+					
+					JettyServer.this.stop();
+					
+					if(JettyServer.this.core instanceof NightWebCoreImpl) {
+						NightWebCoreImpl impl = (NightWebCoreImpl) JettyServer.this.core;
+						impl.getSessionFactory().close();
+					}
+				}
+			});
+			
 			this.server.join();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -162,11 +191,39 @@ public class JettyServer implements Server {
 
 	@Override
 	public ApplicationContext getContext(Application app) throws IllegalArgumentException {
-		return null;
+		if(app.getIdentifier() == null) {
+			throw new IllegalArgumentException("Identifier for " + app.getClass().getCanonicalName() + " is null");
+		}
+		
+		ApplicationService appService = this.core.getServiceManager().getService(ApplicationService.class);
+		ApplicationData data = appService.getByIdentifier(app.getIdentifier());
+		
+		if(data == null) {
+			throw new IllegalArgumentException("App " + app.getIdentifier() + " is not installed");
+		}
+		
+		LOGGER.debug("Initialiazing ServletContextHandler with contextPath=" + data.getContextPath() + " for application " + data.getIdentifier());
+		
+		ServletContextHandler handler = new ServletContextHandler(ServletContextHandler.SESSIONS);
+		handler.setInitParameter("org.eclipse.jetty.servlet.SessionCookie", app.getIdentifier() + ".session");
+		handler.setInitParameter("org.eclipse.jetty.servlet.SessionIdPathParameterName", "none");
+		handler.setContextPath(data.getContextPath());
+		
+		ApplicationContext ctx = new JettyApplicationContext(handler, this.sessionFactory, this.core.getServiceManager());
+		ctx.setModule(app);
+		
+		this.servletContextHandlers.addHandler(handler);
+		
+		return ctx;
 	}
 	
 	public org.eclipse.jetty.server.Server getJettyServer() {
 		return server;
+	}
+	
+	@Override
+	public void setSessionFactory(SessionFactory factory) {
+		this.sessionFactory = factory;
 	}
 
 }

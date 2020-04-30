@@ -21,7 +21,7 @@ public class ModuleData {
 	@Column(name = "name")
 	private String name;
 	
-	@Column(name = "identifier", nullable = false)
+	@Column(name = "identifier", nullable = false, unique = true)
 	private String identifier;
 	
 	@Column(name = "version")
@@ -35,19 +35,18 @@ public class ModuleData {
 	
 	public ModuleData() {}
 	
-	public ModuleData(long id, String identifier) {
-		this.id = id;
+	public ModuleData(String identifier) {
 		this.name = identifier;
 		this.identifier = identifier;
 		this.version = "0.0.0";
 		this.enabled = false;
 	}
-
-	/**
-	 * @return the id
-	 */
-	public long getId() {
-		return id;
+	
+	public ModuleData(ApplicationData data) {
+		this.name = data.getName();
+		this.identifier = data.getIdentifier();
+		this.version = data.getVersion();
+		this.enabled = false;
 	}
 
 	/**
@@ -86,13 +85,6 @@ public class ModuleData {
 	}
 
 	/**
-	 * @param id the id to set
-	 */
-	public void setId(long id) {
-		this.id = id;
-	}
-
-	/**
 	 * @param name the name to set
 	 */
 	public void setName(String name) {
@@ -125,6 +117,11 @@ public class ModuleData {
 	 */
 	public void setEnabled(boolean enabled) {
 		this.enabled = enabled;
+	}
+	
+	@Override
+	public String toString() {
+		return String.format("ModuleData(id=%s, identifier=%s, version=%s)", this.id, this.identifier, this.version);
 	}
 
 }

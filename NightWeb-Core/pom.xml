@@ -19,8 +19,9 @@
 			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<configuration>
-					<source>9</source>
-					<target>9</target>
+					<release>${maven.compiler.source}</release>
+					<source>${maven.compiler.source}</source>
+					<target>${maven.compiler.target}</target>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -37,7 +38,7 @@
 						<configuration>
 							<outputDirectory>${dependencies.dir}</outputDirectory>
 							<includeScope>compile</includeScope>
-							<excludeArtifactIds>javax.persistence-api,jaxb-impl</excludeArtifactIds>
+							<excludeArtifactIds>hibernate-jpa-2.1-api,jaxb-impl</excludeArtifactIds>
 						</configuration>
 					</execution>
 					<execution>
@@ -80,9 +81,9 @@
 							<modules>
 								<module>
 									<artifact>
-										<groupId>org.hibernate.javax.persistence</groupId>
-										<artifactId>hibernate-jpa-2.1-api</artifactId>
-										<version>1.0.0.Final</version>
+										<groupId>javax.persistence</groupId> <!-- org.hibernate.javax.persistence -->
+										<artifactId>javax.persistence-api</artifactId> <!-- hibernate-jpa-2.1-api -->
+										<version>2.2</version> <!-- 1.0.0.Final -->
 									</artifact>
 									<moduleInfo>
 										<name>java.persistence</name>

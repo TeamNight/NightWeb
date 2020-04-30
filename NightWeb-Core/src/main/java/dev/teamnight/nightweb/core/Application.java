@@ -13,6 +13,8 @@ public abstract class Application implements NightModule {
 	
 	private ApplicationContext context;
 	private boolean enabled;
+	
+	private String identifier;
 
 	public abstract void init(ApplicationContext ctx);
 	
@@ -59,6 +61,18 @@ public abstract class Application implements NightModule {
 	@Override
 	public boolean isEnabled() {
 		return this.enabled;
+	}
+	
+	@Override
+	public String getIdentifier() {
+		return this.identifier;
+	}
+	
+	@Override
+	public void setIdentifier(String identifier) {
+		if(this.identifier == null) {
+			this.identifier = identifier;
+		}
 	}
 
 }

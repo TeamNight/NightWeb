@@ -10,6 +10,7 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import dev.teamnight.nightweb.core.Application;
 import dev.teamnight.nightweb.core.ApplicationContext;
 import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.service.ServiceManager;
@@ -19,6 +20,7 @@ public class JettyApplicationContext implements ApplicationContext {
 	private final ServletContextHandler handler;
 	private final SessionFactory factory;
 	private final ServiceManager serviceManager;
+	private Application application;
 	
 	/**
 	 * @param handler
@@ -85,7 +87,11 @@ public class JettyApplicationContext implements ApplicationContext {
 
 	@Override
 	public void setModule(NightModule module) {
-		
+		if(module instanceof Application) {
+			this.application = (Application)module;
+		} else {
+			throw new IllegalArgumentException("module has to be an Application");
+		}
 	}
 
 	@Override

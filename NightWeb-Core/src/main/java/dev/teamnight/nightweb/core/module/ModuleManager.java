@@ -11,6 +11,8 @@ import dev.teamnight.nightweb.core.NightModule;
 
 public interface ModuleManager {
 	
+	public void installModule(NightModule module);
+	
 	public void loadModules(Path modulesDir) throws IllegalArgumentException;
 	
 	public void loadModule(Path path) throws ModuleException;
@@ -29,7 +31,7 @@ public interface ModuleManager {
 	
 	public void enableModules() throws ModuleException, UnknownDependencyException;
 	
-	public void enableModule(NightModule module) throws ModuleException, UnknownDependencyException;
+	public boolean enableModule(NightModule module) throws ModuleException, UnknownDependencyException;
 	
 	public void disableModule(NightModule module);
 	

@@ -3,8 +3,17 @@
  */
 package dev.teamnight.nightweb.core;
 
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+
 import dev.teamnight.nightweb.core.impl.JettyServer;
 import dev.teamnight.nightweb.core.impl.NightWebCoreImpl;
+import dev.teamnight.nightweb.core.module.ModuleMetaFile;
 
 public class Main {
 
@@ -12,8 +21,8 @@ public class Main {
 		NightWebCore nightweb = new NightWebCoreImpl();
 		NightWeb.setCoreApplication(nightweb);
 		
-		System.out.println(nightweb.getImplementationName());
-		System.out.println("Jetty is active: " + ((JettyServer)nightweb.getServer()).getJettyServer().getState());
+		System.out.println("NightWebCore Implementation: " + nightweb.getImplementationName());
+		System.out.println("Jetty State: " + ((JettyServer)nightweb.getServer()).getJettyServer().getState());
 	}
 	
 }

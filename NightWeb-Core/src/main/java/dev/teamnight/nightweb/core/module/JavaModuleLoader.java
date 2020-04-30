@@ -9,10 +9,12 @@ import java.lang.module.Configuration;
 import java.lang.module.ModuleFinder;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -47,18 +49,27 @@ public class JavaModuleLoader implements ModuleLoader {
 			throw new ModuleException("Module.xml could not be loaded");
 		}
 		
+		LOGGER.debug("Loading module into ModuleLayer");
 		ModuleFinder finder = ModuleFinder.of(path.toAbsolutePath());
 		ModuleLayer parent = ModuleLayer.boot();
 		Configuration conf = parent.configuration().resolve(finder, ModuleFinder.of(), Set.of(metaFile.getModuleIdentifier()));
 		ClassLoader scl = ClassLoader.getSystemClassLoader();
 		ModuleLayer layer = parent.defineModulesWithOneLoader(conf, scl);
-		parent.defineModulesWithOneLoader(conf, scl);
+		
+		for(Module module : layer.modules()) {
+			LOGGER.debug(module.getName());
+		}
 		
 		try {
-			Class<?> clazz = layer.findLoader(metaFile.getModuleIdentifier()).loadClass(metaFile.getMainClass());
+			LOGGER.debug("Loading main class: " + metaFile.getMainClass());
+			ClassLoader loader = layer.findLoader(metaFile.getModuleIdentifier());
+			Class<?> clazz = Class.forName(metaFile.getMainClass(), true, loader);
+			LOGGER.debug("Loaded main class: " + clazz.getCanonicalName());
 			
 			try {
+				LOGGER.debug("Creating new instance with public " + clazz.getSimpleName() + "() constructor");
 				NightModule module = (NightModule) clazz.getConstructor().newInstance();
+				LOGGER.debug("Created instance!");
 				
 				return module;
 			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
@@ -93,6 +104,18 @@ public class JavaModuleLoader implements ModuleLoader {
 			
 			if(possibleMetaFile instanceof ModuleMetaFile) {
 				ModuleMetaFile metaFile = (ModuleMetaFile) possibleMetaFile;
+				metaFile.setModulePath(path.toAbsolutePath());
+				
+				if(metaFile.getModuleName() == null ||
+						metaFile.getModuleName().isBlank() ||
+						metaFile.getModuleIdentifier() == null ||
+						metaFile.getModuleIdentifier().isBlank() ||
+						metaFile.getVersion() == null ||
+						metaFile.getVersion().isEmpty() ||
+						metaFile.getMainClass() == null ||
+						metaFile.getMainClass().isBlank()) {
+					throw new ModuleException("Module.xml is not properly set up. You need to set up all fields.");
+				}
 				
 				return metaFile;
 			} else {

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+	<module>
+		<moduleIdentifier>dev.teamnight.nightweb.forum</moduleIdentifier>
+		<moduleName>NightWeb Forum</moduleName>
+		<version>0.0.1</version>
+		<dependencies/>
+		<mavenDependencies/>
+		<Main-Class>dev.teamnight.nightweb.forum.ForumApplication</Main-Class>
+	</module>
