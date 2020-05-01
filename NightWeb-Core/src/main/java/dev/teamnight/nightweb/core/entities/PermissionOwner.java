@@ -12,22 +12,55 @@ import java.util.List;
  * @author Jonas
  *
  */
-public interface PermissionOwner {
+public interface PermissionOwner<T extends Permission> {
 	
-	public List<Permission> getPermissions();
+	/**
+	 * Returns a list of all direct permissions
+	 * @return
+	 */
+	public List<T> getPermissions();
 	
+	/**
+	 * Returns a list of all inherited permissions, e.g. Groups for Users
+	 * @return
+	 */
 	public List<Permission> getInheritedPermissions();
 
+	/**
+	 * Returns whether the user has a direct or inherited permission that resolves to true
+	 * @param Permission thePermission
+	 * @return boolean
+	 */
 	public boolean hasPermission(Permission permission);
 	
+	/**
+	 * Returns whether the user has a direct or inherited permission that resolves to true
+	 * @param String permissionName
+	 * @return boolean
+	 */
 	public boolean hasPermission(String permission);
 	
+	/**
+	 * Adds a permission to the PermissionOwner
+	 * @param permission
+	 */
 	public void addPermission(Permission permission);
 	
+	/**
+	 * Removes a permission from the PermissionOwner
+	 * @param permission
+	 */
 	public void removePermission(Permission permission);
 	
-	public void setPermissions(List<Permission> permissions);
+	/**
+	 * Sets the direct permission array
+	 * @param permissions
+	 */
+	public void setPermissions(List<T> permissions);
 	
+	/**
+	 * Clears all direct permissions
+	 */
 	public void clearPermissions();
 	
 }
