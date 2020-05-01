@@ -53,24 +53,6 @@ public interface NightModule {
 	 * @param servlet
 	 * @throws IllegalArgumentException if servlet is not annotated
 	 */
-	public void addServlet(HttpServlet servlet) throws IllegalArgumentException;
-	
-	/**
-	 * Adds a servlet to the handler using given path.
-	 * 
-	 * @param servlet
-	 * @param String path specification
-	 */
-	public void addServlet(HttpServlet servlet, String pathSpec);
-	
-	/**
-	 * Adds a servlet to the handler.
-	 * 
-	 * <p>The Servlet needs to be annotated with a {@link javax.servlet.annotation.WebServlet} in order to be accepted.<p>
-	 * 
-	 * @param servlet
-	 * @throws IllegalArgumentException if servlet is not annotated
-	 */
 	public void addServlet(Class<? extends HttpServlet> servlet) throws IllegalArgumentException;
 	
 	/**

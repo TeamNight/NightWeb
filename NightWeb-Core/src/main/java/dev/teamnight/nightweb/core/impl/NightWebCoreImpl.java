@@ -35,7 +35,12 @@ import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.Server;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
+import dev.teamnight.nightweb.core.entities.Group;
+import dev.teamnight.nightweb.core.entities.GroupPermission;
 import dev.teamnight.nightweb.core.entities.ModuleData;
+import dev.teamnight.nightweb.core.entities.Permission;
+import dev.teamnight.nightweb.core.entities.User;
+import dev.teamnight.nightweb.core.entities.UserPermission;
 import dev.teamnight.nightweb.core.entities.XmlConfiguration;
 import dev.teamnight.nightweb.core.module.JavaModuleLoader;
 import dev.teamnight.nightweb.core.module.ModuleManager;
@@ -162,7 +167,12 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		Configuration hibernateConf = new Configuration()
 				.configure(hibernateConfigPath.toFile())
 				.addAnnotatedClass(ModuleData.class)
-				.addAnnotatedClass(ApplicationData.class);
+				.addAnnotatedClass(ApplicationData.class)
+				.addAnnotatedClass(Permission.class)
+				.addAnnotatedClass(UserPermission.class)
+				.addAnnotatedClass(GroupPermission.class)
+				.addAnnotatedClass(User.class)
+				.addAnnotatedClass(Group.class);
 		
 		LOGGER.debug("Setting up ModuleManagerImpl");
 		this.moduleManager = new ModuleManagerImpl(this);

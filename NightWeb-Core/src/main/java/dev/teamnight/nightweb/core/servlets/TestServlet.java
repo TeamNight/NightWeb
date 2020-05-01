@@ -6,6 +6,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import dev.teamnight.nightweb.core.Authenticated;
+
+@Authenticated
 public class TestServlet extends HttpServlet {
 	@Override
     protected void doGet(HttpServletRequest request,

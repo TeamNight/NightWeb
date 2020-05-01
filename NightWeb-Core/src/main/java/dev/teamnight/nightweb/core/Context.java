@@ -11,10 +11,6 @@ import org.hibernate.Session;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 
 public interface Context {
-
-	public void registerServlet(HttpServlet servlet);
-	
-	public void registerServlet(HttpServlet servlet, String pathInfo);
 	
 	public void registerServlet(Class<? extends HttpServlet> servlet);
 	

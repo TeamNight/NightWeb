@@ -3,7 +3,7 @@
     <Appenders>
 	
 	    <Console name="TerminalConsole" target="SYSTEM_OUT">
-		  <PatternLayout pattern="[%d{dd/MMM/yyyy HH:mm:ss}] [%level] %logger{36}: %msg%n" />
+		  <PatternLayout pattern="[%d{dd/MMM/yyyy HH:mm:ss}] [%level]: %msg%n" />
 		</Console>
 	
         <RollingRandomAccessFile name="File" fileName="logs/latest.log" filePattern="logs/%d{yyyy-MM-dd}-%i.log.gz">

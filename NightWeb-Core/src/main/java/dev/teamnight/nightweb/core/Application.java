@@ -36,16 +36,6 @@ public abstract class Application implements NightModule {
 	}
 
 	@Override
-	public void addServlet(HttpServlet servlet) {
-		this.context.registerServlet(servlet);
-	}
-
-	@Override
-	public void addServlet(HttpServlet servlet, String pathInfo) {
-		this.context.registerServlet(servlet, pathInfo);
-	}
-
-	@Override
 	public void addServlet(Class<? extends HttpServlet> servlet) {
 	}
 

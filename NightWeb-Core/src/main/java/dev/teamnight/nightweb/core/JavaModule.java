@@ -40,19 +40,6 @@ public abstract class JavaModule implements NightModule {
 	public Context getContext() {
 		return this.context;
 	}
-	
-
-	@Override
-	public void addServlet(HttpServlet servlet) throws IllegalArgumentException {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void addServlet(HttpServlet servlet, String pathSpec) {
-		// TODO Auto-generated method stub
-		
-	}
 
 	@Override
 	public void addServlet(Class<? extends HttpServlet> servlet) throws IllegalArgumentException {

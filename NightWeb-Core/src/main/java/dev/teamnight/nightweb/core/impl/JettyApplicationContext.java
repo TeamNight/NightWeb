@@ -3,20 +3,30 @@
  */
 package dev.teamnight.nightweb.core.impl;
 
+import java.lang.annotation.Annotation;
+import java.util.EnumSet;
+
+import javax.servlet.DispatcherType;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import dev.teamnight.nightweb.core.Application;
 import dev.teamnight.nightweb.core.ApplicationContext;
+import dev.teamnight.nightweb.core.Authenticated;
 import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 
 public class JettyApplicationContext implements ApplicationContext {
 
+	private static FilterHolder authenticationFilter = new FilterHolder(new AuthenticationFilter());
+	
 	private final ServletContextHandler handler;
 	private final SessionFactory factory;
 	private final ServiceManager serviceManager;
@@ -35,49 +45,54 @@ public class JettyApplicationContext implements ApplicationContext {
 
 	@Override
 	public void registerServlet(Class<? extends HttpServlet> servlet, String pathSpec) {
+		for(Annotation annotation : servlet.getAnnotations()) {
+			if(annotation instanceof Authenticated) {
+				this.handler.addFilter(authenticationFilter, pathSpec, EnumSet.allOf(DispatcherType.class));
+			}
+		}
+		
 		this.handler.addServlet(servlet, pathSpec);
 	}
 
 	@Override
-	public void registerServlet(HttpServlet servlet) {
-		// TODO Auto-generated method stub
+	public void registerServlet(Class<? extends HttpServlet> servlet) throws IllegalArgumentException {
+		WebServlet webServlet = servlet.getAnnotation(WebServlet.class);
 		
-	}
-
-	@Override
-	public void registerServlet(HttpServlet servlet, String pathInfo) {
-		// TODO Auto-generated method stub
+		if(webServlet == null) {
+			throw new IllegalArgumentException("WebServlet annotation is missing on " + servlet.getCanonicalName());
+		}
 		
-	}
-
-	@Override
-	public void registerServlet(Class<? extends HttpServlet> servlet) {
-		// TODO Auto-generated method stub
+		Authenticated auth = servlet.getAnnotation(Authenticated.class);
+		if(auth != null) {
+			for(String url : webServlet.urlPatterns()) {
+				this.handler.addFilter(authenticationFilter, url, EnumSet.allOf(DispatcherType.class));
+			}
+			
+		}
 		
+		for(String url : webServlet.urlPatterns()) {
+			this.handler.addServlet(servlet, url);
+		}
 	}
 
 	@Override
 	public Session getDatabaseSession() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.factory.openSession();
 	}
 
 	@Override
 	public Logger getLogger() {
-		// TODO Auto-generated method stub
-		return null;
+		return LogManager.getLogger(this.application.getClass());
 	}
 
 	@Override
 	public Logger getLogger(Class<?> object) {
-		// TODO Auto-generated method stub
-		return null;
+		return LogManager.getLogger(object);
 	}
 
 	@Override
 	public String getContextPath() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.handler.getContextPath();
 	}
 
 	@Override
@@ -96,8 +111,7 @@ public class JettyApplicationContext implements ApplicationContext {
 
 	@Override
 	public ServiceManager getServiceManager() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.serviceManager;
 	}
 
 }

@@ -30,18 +30,6 @@ public class ModuleContext implements Context {
 	protected ApplicationContext getApplicationContext() {
 		return this.appContext;
 	}
-	
-	@Override
-	public void registerServlet(HttpServlet servlet) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void registerServlet(HttpServlet servlet, String pathInfo) {
-		// TODO Auto-generated method stub
-
-	}
 
 	@Override
 	public void registerServlet(Class<? extends HttpServlet> servlet) {
