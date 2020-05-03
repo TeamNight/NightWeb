@@ -38,19 +38,25 @@ public interface PermissionOwner<T extends Permission> {
 	 * @param String permissionName
 	 * @return boolean
 	 */
-	public boolean hasPermission(String permission);
+	public boolean hasPermission(String permissionName);
 	
 	/**
 	 * Adds a permission to the PermissionOwner
 	 * @param permission
 	 */
-	public void addPermission(Permission permission);
+	public void addPermission(T permission);
 	
 	/**
 	 * Removes a permission from the PermissionOwner
 	 * @param permission
 	 */
-	public void removePermission(Permission permission);
+	public void removePermission(T permission);
+	
+	/**
+	 * Removes a permission from the PermissionOwner using its name
+	 * @param permission
+	 */
+	public void removePermission(String permissionName);
 	
 	/**
 	 * Sets the direct permission array

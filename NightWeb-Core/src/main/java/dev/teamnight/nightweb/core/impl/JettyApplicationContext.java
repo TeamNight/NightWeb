@@ -14,13 +14,16 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import dev.teamnight.nightweb.core.Application;
 import dev.teamnight.nightweb.core.ApplicationContext;
 import dev.teamnight.nightweb.core.Authenticated;
+import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightModule;
+import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 
 public class JettyApplicationContext implements ApplicationContext {
@@ -31,6 +34,8 @@ public class JettyApplicationContext implements ApplicationContext {
 	private final SessionFactory factory;
 	private final ServiceManager serviceManager;
 	private Application application;
+
+	private Class<? extends WebSession> sessionType;
 	
 	/**
 	 * @param handler
@@ -44,6 +49,32 @@ public class JettyApplicationContext implements ApplicationContext {
 	}
 
 	@Override
+	public void registerServlet(Class<? extends HttpServlet> servlet, String pathSpec, Context ctx) {
+		WebServlet webServlet = null;
+		
+		if(pathSpec == null) {
+			webServlet = servlet.getAnnotation(WebServlet.class);
+			
+			if(webServlet == null) {
+				throw new IllegalArgumentException("WebServlet annotation is missing on " + servlet.getCanonicalName());
+			}
+		}
+		
+		Authenticated auth = servlet.getAnnotation(Authenticated.class);
+		if(auth != null) {
+			if(webServlet != null) {
+				for(String url : webServlet.urlPatterns()) {
+					this.handler.addFilter(authenticationFilter, url, EnumSet.allOf(DispatcherType.class));
+				}
+			} else {
+				this.handler.addFilter(authenticationFilter, pathSpec, EnumSet.allOf(DispatcherType.class));
+			}
+		}
+		
+		this.registerServlet(new NightJettyServletHolder(servlet).setContext(ctx), pathSpec);
+	}
+	
+	@Override
 	public void registerServlet(Class<? extends HttpServlet> servlet, String pathSpec) {
 		for(Annotation annotation : servlet.getAnnotations()) {
 			if(annotation instanceof Authenticated) {
@@ -51,7 +82,7 @@ public class JettyApplicationContext implements ApplicationContext {
 			}
 		}
 		
-		this.handler.addServlet(servlet, pathSpec);
+		this.registerServlet(new NightJettyServletHolder(servlet).setContext(this), pathSpec);
 	}
 
 	@Override
@@ -70,9 +101,15 @@ public class JettyApplicationContext implements ApplicationContext {
 			
 		}
 		
+		NightJettyServletHolder holder = new NightJettyServletHolder(servlet).setContext(this);
+		
 		for(String url : webServlet.urlPatterns()) {
-			this.handler.addServlet(servlet, url);
+			this.registerServlet(holder, url);
 		}
+	}
+
+	private void registerServlet(ServletHolder holder, String pathSpec) {
+		this.handler.addServlet(holder, pathSpec);
 	}
 
 	@Override
@@ -112,6 +149,27 @@ public class JettyApplicationContext implements ApplicationContext {
 	@Override
 	public ServiceManager getServiceManager() {
 		return this.serviceManager;
+	}
+	
+
+	@Override
+	public Class<? extends WebSession> getSessionType() {
+		return this.sessionType;
+	}
+	
+	@Override
+	public void setSessionType(Class<? extends WebSession> sessionType) throws IllegalArgumentException {
+		if(this.sessionType != null) {
+			throw new IllegalArgumentException("Session Type can only be set once");
+		}
+		
+		try {
+			this.sessionType.getConstructor(Context.class);
+		} catch (NoSuchMethodException | SecurityException e) {
+			throw new IllegalArgumentException("Missing public " + this.sessionType.getSimpleName() + "(Context) Constructor", e);
+		}
+		
+		this.sessionType = sessionType;
 	}
 
 }

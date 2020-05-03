@@ -3,6 +3,10 @@
  */
 package dev.teamnight.nightweb.core.impl;
 
+import java.util.EnumSet;
+
+import javax.servlet.DispatcherType;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 
 import org.apache.logging.log4j.LogManager;
@@ -10,14 +14,17 @@ import org.apache.logging.log4j.Logger;
 import org.hibernate.Session;
 
 import dev.teamnight.nightweb.core.ApplicationContext;
+import dev.teamnight.nightweb.core.Authenticated;
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightModule;
+import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 
 public class ModuleContext implements Context {
 
 	private ApplicationContext appContext;
 	private NightModule module;
+	private Class<? extends WebSession> sessionType;
 	
 	/**
 	 * @param appContext
@@ -33,13 +40,18 @@ public class ModuleContext implements Context {
 
 	@Override
 	public void registerServlet(Class<? extends HttpServlet> servlet) {
-		// TODO Auto-generated method stub
-
+		WebServlet webServlet = servlet.getAnnotation(WebServlet.class);
+		
+		if(webServlet == null) {
+			throw new IllegalArgumentException("WebServlet annotation is missing on " + servlet.getCanonicalName());
+		}
+		
+		this.appContext.registerServlet(servlet, null, this);
 	}
 
 	@Override
 	public void registerServlet(Class<? extends HttpServlet> servlet, String pathInfo) {
-		//TODO Implement using module param
+		this.appContext.registerServlet(servlet, pathInfo, this);
 	}
 
 	@Override
@@ -70,6 +82,26 @@ public class ModuleContext implements Context {
 	@Override
 	public ServiceManager getServiceManager() {
 		return this.appContext.getServiceManager();
+	}
+
+	@Override
+	public Class<? extends WebSession> getSessionType() {
+		return this.sessionType;
+	}
+	
+	@Override
+	public void setSessionType(Class<? extends WebSession> sessionType) throws IllegalArgumentException {
+		if(this.sessionType != null) {
+			throw new IllegalArgumentException("Session Type can only be set once");
+		}
+		
+		try {
+			this.sessionType.getConstructor(Context.class);
+		} catch (NoSuchMethodException | SecurityException e) {
+			throw new IllegalArgumentException("Missing public " + this.sessionType.getSimpleName() + "(Context) Constructor", e);
+		}
+		
+		this.sessionType = sessionType;
 	}
 
 }

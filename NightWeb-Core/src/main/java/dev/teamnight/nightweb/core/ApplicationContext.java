@@ -3,6 +3,9 @@
  */
 package dev.teamnight.nightweb.core;
 
+import javax.servlet.http.HttpServlet;
+
+import org.eclipse.jetty.servlet.ServletHolder;
 import org.hibernate.SessionFactory;
 
 public interface ApplicationContext extends Context {
@@ -13,5 +16,7 @@ public interface ApplicationContext extends Context {
 	 * @return {@link org.hibernate.SessionFactory} the SessionFactory
 	 */
 	public SessionFactory getSessionFactory();
+	
+	public void registerServlet(Class<? extends HttpServlet> servlet, String pathSpec, Context ctx);
 	
 }

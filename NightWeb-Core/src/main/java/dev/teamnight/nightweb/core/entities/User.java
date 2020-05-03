@@ -4,9 +4,9 @@
 package dev.teamnight.nightweb.core.entities;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -28,7 +28,7 @@ import javax.persistence.JoinColumn;
 @Entity
 @Table(name = "users")
 public class User implements PermissionOwner<UserPermission> {
-
+	
 	@Id
 	@GeneratedValue
 	private long id;
@@ -129,25 +129,6 @@ public class User implements PermissionOwner<UserPermission> {
 	}
 
 	/**
-	 * @return the permissions
-	 */
-	@Override
-	public List<UserPermission> getPermissions() {
-		return permissions;
-	}
-	
-	@Override
-	public List<Permission> getInheritedPermissions() {
-		List<Permission> groupPermissions = new ArrayList<Permission>();
-		
-		for(Group group : this.groups) {
-			groupPermissions.addAll(group.getPermissions());
-		}
-		
-		return groupPermissions;
-	}
-
-	/**
 	 * @return the disabled
 	 */
 	public boolean isDisabled() {
@@ -230,6 +211,29 @@ public class User implements PermissionOwner<UserPermission> {
 	public void setDisabled(boolean disabled) {
 		this.disabled = disabled;
 	}
+	
+	// ----------------------------------------------------------------------- //
+	// PermissionOwner implemenation                                           //
+	// ----------------------------------------------------------------------- //
+
+	/**
+	 * @return the permissions
+	 */
+	@Override
+	public List<UserPermission> getPermissions() {
+		return Collections.unmodifiableList(permissions);
+	}
+	
+	@Override
+	public List<Permission> getInheritedPermissions() {
+		List<Permission> groupPermissions = new ArrayList<Permission>();
+		
+		for(Group group : this.groups) {
+			groupPermissions.addAll(group.getPermissions());
+		}
+		
+		return Collections.unmodifiableList(groupPermissions);
+	}
 
 	@Override
 	public boolean hasPermission(Permission permission) {
@@ -248,33 +252,55 @@ public class User implements PermissionOwner<UserPermission> {
 			return true;
 		}
 		
-		List<GroupPermission> groupPermissions;
+		List<GroupPermission> groupPermissions = new ArrayList<GroupPermission>();
+		
+		this.groups.forEach(group -> {
+			groupPermissions.addAll(group.getPermissions());
+		});
+		
+		// TODO IMPORTANT IMPLEMENT
 		
 		return false;
 	}
 
 	@Override
-	public void addPermission(Permission permission) {
-		// TODO Auto-generated method stub
+	public void addPermission(UserPermission permission) {
+		UserPermission existingPerm = this.permissions.stream()
+				.filter(perm -> perm.getName().equalsIgnoreCase(permission.getName()))
+				.findFirst()
+				.orElse(null);
 		
+		if(existingPerm != null) {
+			permission.setName(permission.getName().toLowerCase());
+			this.permissions.add(permission);
+		}
 	}
 
 	@Override
-	public void removePermission(Permission permission) {
-		// TODO Auto-generated method stub
+	public void removePermission(UserPermission permission) {
+		this.permissions.remove(permission);
+	}
+	
+	@Override
+	public void removePermission(String permissionName) {
+		UserPermission permission = this.permissions.stream()
+				.filter(perm -> perm.getName().equalsIgnoreCase(permissionName))
+				.findFirst()
+				.orElse(null);
 		
+		if(permission != null) {
+			this.permissions.remove(permission);
+		}
 	}
 
 	@Override
 	public void clearPermissions() {
-		// TODO Auto-generated method stub
-		
+		this.permissions.clear();
 	}
 
 	@Override
 	public void setPermissions(List<UserPermission> permissions) {
-		// TODO Auto-generated method stub
-		
+		this.permissions = permissions;
 	}
 	
 }

@@ -34,6 +34,7 @@ import dev.teamnight.nightweb.core.ApplicationContext;
 import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.Server;
+import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
 import dev.teamnight.nightweb.core.entities.Group;
 import dev.teamnight.nightweb.core.entities.GroupPermission;
@@ -313,6 +314,18 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	@Override
 	public String getSessions() {
 		return null;
+	}
+	
+	@Override
+	public void addSession(WebSession session) {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	@Override
+	public void removeSession(WebSession session) {
+		// TODO Auto-generated method stub
+		
 	}
 	
 	public ModuleManager getModuleManager() {

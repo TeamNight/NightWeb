@@ -103,4 +103,8 @@ public interface NightWebCore {
 	 */
 	public String getSessions();
 	
+	public void addSession(WebSession session);
+	
+	public void removeSession(WebSession session);
+	
 }

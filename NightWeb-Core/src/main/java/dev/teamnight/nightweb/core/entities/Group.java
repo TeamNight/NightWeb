@@ -3,7 +3,10 @@
  */
 package dev.teamnight.nightweb.core.entities;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -21,7 +24,7 @@ import javax.persistence.Table;
  */
 @Entity
 @Table(name = "groups")
-public class Group implements Comparable<Group>, PermissionOwner {
+public class Group implements Comparable<Group>, PermissionOwner<GroupPermission> {
 	
 	@Id
 	@GeneratedValue
@@ -103,5 +106,71 @@ public class Group implements Comparable<Group>, PermissionOwner {
 		this.priority = priority;
 	}
 	
+	// ----------------------------------------------------------------------- //
+	// PermissionOwner implemenation                                           //
+	// ----------------------------------------------------------------------- //
+	
+
+	@Override
+	public List<GroupPermission> getPermissions() {
+		return Collections.unmodifiableList(permissions);
+	}
+	
+	@Override
+	public List<Permission> getInheritedPermissions() {
+		return this.permissions.stream().map(perm -> (Permission)perm).collect(Collectors.toUnmodifiableList());
+	}
+
+	@Override
+	public boolean hasPermission(Permission permission) {
+		return this.hasPermission(permission.getName());
+	}
+
+	@Override
+	public boolean hasPermission(String permission) {
+		//TODO IMPORTANT IMPLEMENT
+		
+		return false;
+	}
+
+	@Override
+	public void addPermission(GroupPermission permission) {
+		GroupPermission existingPerm = this.permissions.stream()
+				.filter(perm -> perm.getName().equalsIgnoreCase(permission.getName()))
+				.findFirst()
+				.orElse(null);
+		
+		if(existingPerm != null) {
+			permission.setName(permission.getName().toLowerCase());
+			this.permissions.add(permission);
+		}
+	}
+
+	@Override
+	public void removePermission(GroupPermission permission) {
+		this.permissions.remove(permission);
+	}
+	
+	@Override
+	public void removePermission(String permissionName) {
+		GroupPermission permission = this.permissions.stream()
+				.filter(perm -> perm.getName().equalsIgnoreCase(permissionName))
+				.findFirst()
+				.orElse(null);
+		
+		if(permission != null) {
+			this.permissions.remove(permission);
+		}
+	}
+
+	@Override
+	public void clearPermissions() {
+		this.permissions.clear();
+	}
+
+	@Override
+	public void setPermissions(List<GroupPermission> permissions) {
+		this.permissions = permissions;
+	}
 	
 }

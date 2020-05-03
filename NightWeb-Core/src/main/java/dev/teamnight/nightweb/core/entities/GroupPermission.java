@@ -7,13 +7,14 @@ import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 
 /**
  * @author Jonas
  *
  */
 @Entity
-@Table(name = "group_permissions")
+@Table(name = "group_permissions", uniqueConstraints = @UniqueConstraint(columnNames = {"groupId", "name"}))
 public class GroupPermission extends Permission {
 	
 	@ManyToOne
