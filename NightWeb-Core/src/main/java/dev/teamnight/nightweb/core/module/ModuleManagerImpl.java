@@ -21,12 +21,11 @@ import org.apache.logging.log4j.Logger;
 
 import dev.teamnight.nightweb.core.Application;
 import dev.teamnight.nightweb.core.ApplicationContext;
+import dev.teamnight.nightweb.core.ModuleContext;
 import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.entities.ModuleData;
-import dev.teamnight.nightweb.core.impl.ModuleContext;
 import dev.teamnight.nightweb.core.impl.NightWebCoreImpl;
-import dev.teamnight.nightweb.core.service.ApplicationService;
 import dev.teamnight.nightweb.core.service.ModuleService;
 
 public class ModuleManagerImpl implements ModuleManager {

@@ -5,9 +5,9 @@ import static org.junit.Assert.assertTrue;
 import org.hibernate.SessionFactory;
 import org.junit.Test;
 
-import dev.teamnight.nightweb.core.service.DatabaseService;
+import dev.teamnight.nightweb.core.service.AbstractService;
 
-public class TestService extends DatabaseService<String> {
+public class TestService extends AbstractService<String> {
 
 	public TestService() {
 		super(null);

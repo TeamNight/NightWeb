@@ -2,6 +2,7 @@ module dev.teamnight.nightweb.core {
 	exports dev.teamnight.nightweb.core;
 	exports dev.teamnight.nightweb.core.entities;
 	exports dev.teamnight.nightweb.core.service;
+	exports dev.teamnight.nightweb.core.template;
 	
 	//Export to jetty in order for jetty to use the servlets
 	exports dev.teamnight.nightweb.core.servlets 
@@ -11,7 +12,7 @@ module dev.teamnight.nightweb.core {
 	opens dev.teamnight.nightweb.core.entities;
 	opens dev.teamnight.nightweb.core.module to java.xml.bind;
 
-	requires java.naming;
+	requires transitive freemarker;
 	requires transitive java.persistence;
 	requires java.xml.bind;
 	requires transitive javax.servlet.api;
@@ -25,4 +26,5 @@ module dev.teamnight.nightweb.core {
 	//For Hibernate
 	requires net.bytebuddy;
 	requires transitive mysql.connector.java;
+	requires com.google.common;
 }

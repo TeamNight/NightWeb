@@ -41,6 +41,13 @@ public interface PermissionOwner<T extends Permission> {
 	public boolean hasPermission(String permissionName);
 	
 	/**
+	 * Returns the permission by name
+	 * @param permissionName
+	 * @return the Permission or {@code null}
+	 */
+	public T getPermission(String permissionName);
+	
+	/**
 	 * Adds a permission to the PermissionOwner
 	 * @param permission
 	 */

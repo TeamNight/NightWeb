@@ -3,10 +3,17 @@
  */
 package dev.teamnight.nightweb.core;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.Date;
+
+import dev.teamnight.nightweb.core.entities.ErrorLogEntry;
+import dev.teamnight.nightweb.core.service.ErrorLogService;
 import dev.teamnight.nightweb.core.service.GroupService;
 import dev.teamnight.nightweb.core.service.PermissionService;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 import dev.teamnight.nightweb.core.service.UserService;
+import dev.teamnight.nightweb.core.template.TemplateManager;
 
 public final class NightWeb {
 
@@ -28,7 +35,7 @@ public final class NightWeb {
 		return core.getServiceManager();
 	}
 
-	public static String getTemplateManager() {
+	public static TemplateManager getTemplateManager() {
 		return core.getTemplateManager();
 	}
 
@@ -41,13 +48,28 @@ public final class NightWeb {
 	}
 
 	public static GroupService getGroupService() {
-		// TODO Auto-generated method stub
 		return core.getGroupService();
 	}
 
 	public static PermissionService getPermissionService() {
-		// TODO Auto-generated method stub
 		return core.getPermissionService();
+	}
+	
+	public static void logError(Throwable error, Class<?> exceptionLocation) {
+		ErrorLogEntry entry = new ErrorLogEntry();
+		entry.setClassName(exceptionLocation.getCanonicalName());
+		entry.setErrorName(error.getClass().getCanonicalName());
+		entry.setErrorMessage(error.getMessage());
+		entry.setTime(new Date());
+		
+		StringWriter writer = new StringWriter();
+		PrintWriter pw = new PrintWriter(writer);
+		error.printStackTrace(pw);
+		
+		entry.setStackTrace(writer.toString());
+		
+		ErrorLogService service = core.getServiceManager().getService(ErrorLogService.class);
+		service.save(entry);
 	}
 	
 }

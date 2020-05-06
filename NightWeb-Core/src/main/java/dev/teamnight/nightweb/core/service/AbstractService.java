@@ -14,22 +14,21 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.Query;
 
-public abstract class DatabaseService<T> implements Service<T> {
+public abstract class AbstractService<T> implements Service<T> {
 
 	private final Class<T> type;
 	private SessionFactory factory;
 	
 	@SuppressWarnings("unused")
-	private DatabaseService() {
+	private AbstractService() {
 		this.type = null;
 	}
 	
 	@SuppressWarnings("unchecked")
-	public DatabaseService(SessionFactory factory) {
-		//TODO remove comment
-//		if(factory == null) {
-//			throw new IllegalArgumentException("factory can not be null");
-//		}
+	public AbstractService(SessionFactory factory) {
+		if(factory == null) {
+			throw new IllegalArgumentException("factory can not be null");
+		}
 		
 		this.type = (Class<T>) ((ParameterizedType)getClass().getGenericSuperclass()).getActualTypeArguments()[0];
 		this.factory = factory;

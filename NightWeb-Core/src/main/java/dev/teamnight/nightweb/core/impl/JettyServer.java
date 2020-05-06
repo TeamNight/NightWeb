@@ -98,6 +98,7 @@ public class JettyServer implements Server {
 		handlers.addHandler(this.servletContextHandlers);
 		
 		server.setHandler(handlers);
+		server.setErrorHandler(new JettyErrorHandler(NightWeb.getTemplateManager()));
 	}
 	
 	public boolean isSSLEnabled() {
@@ -147,8 +148,7 @@ public class JettyServer implements Server {
 	public void setIPAddress(String hostAddress) {
 		for(Connector c : this.server.getConnectors()) {
 			if(c instanceof ServerConnector) {
-				ServerConnector sc = (ServerConnector) c;
-				sc.setHost(hostAddress);
+				((ServerConnector) c).setHost(hostAddress);
 			}
 		}
 	}
@@ -159,6 +159,7 @@ public class JettyServer implements Server {
 		//TODO Implement domain filtering using Filters
 	}
 
+	@SuppressWarnings("resource")
 	@Override
 	public void setPort(int port) {
 		for(Connector c : this.server.getConnectors()) {
@@ -174,6 +175,7 @@ public class JettyServer implements Server {
 		}
 	}
 
+	@SuppressWarnings("resource")
 	@Override
 	public void setSSLPort(int port) {
 		for(Connector c : this.server.getConnectors()) {

@@ -22,7 +22,7 @@ public class ApplicationData {
 
 	@Id
 	@GeneratedValue
-	@Column(name = "id", nullable = false)
+	@Column(name = "id", updatable = false, nullable = false)
 	private long id;
 	
 	@Column(name = "name")

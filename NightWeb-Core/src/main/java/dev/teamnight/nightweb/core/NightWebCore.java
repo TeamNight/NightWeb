@@ -3,10 +3,13 @@
  */
 package dev.teamnight.nightweb.core;
 
+import java.util.List;
+
 import dev.teamnight.nightweb.core.service.GroupService;
 import dev.teamnight.nightweb.core.service.PermissionService;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 import dev.teamnight.nightweb.core.service.UserService;
+import dev.teamnight.nightweb.core.template.TemplateManager;
 
 public interface NightWebCore {
 	
@@ -75,8 +78,11 @@ public interface NightWebCore {
 	 */
 	public ServiceManager getServiceManager();
 	
-	// TODO Change to TemplateManager or directly to TemplateBuilder
-	public String getTemplateManager();
+	/**
+	 * Returns the template Manager
+	 * @return
+	 */
+	public TemplateManager getTemplateManager();
 	
 	// TODO Change to MailService
 	public String getMailService();
@@ -101,10 +107,23 @@ public interface NightWebCore {
 	 * 
 	 * @return List of {@link dev.teamnight.nightweb.core.WebSession}
 	 */
-	public String getSessions();
+	public List<WebSession> getSessions();
 	
+	/**
+	 * Adds a session to the session list
+	 * @param session
+	 */
 	public void addSession(WebSession session);
 	
+	/**
+	 * Removes a session from the session list
+	 * @param session
+	 */
 	public void removeSession(WebSession session);
 	
+	/**
+	 * Returns whether the debug mode is enabled
+	 * @return
+	 */
+	public boolean isDebugModeEnabled();
 }

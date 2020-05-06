@@ -3,21 +3,32 @@
  */
 package dev.teamnight.nightweb.core.entities;
 
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
 import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
 import javax.persistence.Table;
+
+import dev.teamnight.nightweb.core.entities.Permission.Tribool;
+
 import javax.persistence.JoinColumn;
 
 /**
@@ -27,18 +38,22 @@ import javax.persistence.JoinColumn;
 
 @Entity
 @Table(name = "users")
+@Inheritance(strategy = InheritanceType.JOINED)
 public class User implements PermissionOwner<UserPermission> {
 	
 	@Id
-	@GeneratedValue
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(updatable = false, nullable = false)
 	private long id;
-	@Column(nullable = false)
+	@Column(nullable = false, unique = true)
 	private String username;
-	@Column(nullable = false)
+	@Column(nullable = false, unique = true)
 	private String email;
 	
 	@Column(nullable = false)
 	private String password;
+	@Column(nullable = false)
+	private String salt;
 	
 	@Column(nullable = false)
 	private Date registrationDate;
@@ -64,7 +79,23 @@ public class User implements PermissionOwner<UserPermission> {
 	
 	@Column(nullable = false)
 	private boolean disabled;
+	
+	protected User() {}
+	
+	public User(String username, String email) {
+		this.username = username;
+		this.email = email;
+		this.registrationDate = new Date();
+		this.groups = new ArrayList<Group>();
+		this.permissions = new ArrayList<UserPermission>();
+		this.disabled = true;
+	}
 
+	// ----------------------------------------------------------------------- //
+	// Getter/Setter                                                           //
+	// ----------------------------------------------------------------------- //
+	
+	/**
 	/**
 	 * @return the id
 	 */
@@ -91,6 +122,13 @@ public class User implements PermissionOwner<UserPermission> {
 	 */
 	public String getPassword() {
 		return password;
+	}
+	
+	/**
+	 * @return the salt
+	 */
+	public String getSalt() {
+		return salt;
 	}
 
 	/**
@@ -125,6 +163,7 @@ public class User implements PermissionOwner<UserPermission> {
 	 * @return the groups
 	 */
 	public List<Group> getGroups() {
+		Collections.sort(this.groups);
 		return groups;
 	}
 
@@ -154,6 +193,13 @@ public class User implements PermissionOwner<UserPermission> {
 	 */
 	public void setPassword(String password) {
 		this.password = password;
+	}
+	
+	/**
+	 * @param salt the salt to set
+	 */
+	public void setSalt(String salt) {
+		this.salt = salt;
 	}
 
 	/**
@@ -242,8 +288,15 @@ public class User implements PermissionOwner<UserPermission> {
 
 	@Override
 	public boolean hasPermission(String permission) {
+		/**
+		 * Check for User
+		 * UserPermission has yes or no/neutral, no resolves to true, no/neutral to no, UserPermissions override all GroupPermissions, if no go to GroupPerms
+		 * (Groups are sorted by priority, highest priority first, all permissions to one ArrayList)
+		 * GroupPermission true allows, neutral ignores, false denies
+		 */
 		UserPermission userPerm = this.permissions.stream()
 				.filter(perm -> perm.getName().equals(permission))
+				.filter(perm -> perm.getType() == Permission.Type.FLAG)
 				.filter(perm -> perm.getAsBoolean())
 				.findFirst()
 				.orElse(null);
@@ -252,15 +305,29 @@ public class User implements PermissionOwner<UserPermission> {
 			return true;
 		}
 		
+		boolean allow = false;
+		
 		List<GroupPermission> groupPermissions = new ArrayList<GroupPermission>();
 		
 		this.groups.forEach(group -> {
-			groupPermissions.addAll(group.getPermissions());
+			groupPermissions.addAll(group.getPermissions().stream().filter(perm -> perm.getType() == Permission.Type.FLAG).collect(Collectors.toList()));
 		});
 		
-		// TODO IMPORTANT IMPLEMENT
-		
-		return false;
+		for(GroupPermission perm : groupPermissions) {
+			Tribool bool = perm.getAsTribool();
+			
+			if(bool == Tribool.TRUE) {
+				allow = true;
+			} else if(bool == Tribool.FALSE) {
+				return false;
+			}
+		}
+		return allow;
+	}
+	
+	@Override
+	public UserPermission getPermission(String permissionName) {
+		return this.permissions.stream().filter(perm -> perm.getName().equalsIgnoreCase(permissionName)).findFirst().orElse(null);
 	}
 
 	@Override
@@ -303,4 +370,42 @@ public class User implements PermissionOwner<UserPermission> {
 		this.permissions = permissions;
 	}
 	
+	// ----------------------------------------------------------------------- //
+	// Authentication                                                          //
+	// ----------------------------------------------------------------------- //
+	
+	/**
+	 * Generates a sha-256 hash using the given password and the salt from the database
+	 * 
+	 * @param String unhashed password
+	 * @return hashed password
+	 */
+	public String createHash(String password) {
+		MessageDigest digest;
+		try {
+			digest = MessageDigest.getInstance("SHA-256");
+			byte[] hash = digest.digest((password + this.salt).getBytes(StandardCharsets.UTF_8));
+			
+			return String.format("%064x", new BigInteger(1, hash));
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	/**
+	 * Verifies the user by his password.
+	 * 
+	 * @param String unhashed password
+	 * @return true if the password equals
+	 */
+	public boolean verifyPassword(String passwordToCheck) {
+		String hashedPassword = this.createHash(passwordToCheck);
+		
+		if(hashedPassword.equals(this.password)) {
+			return true;
+		}
+		
+		return false;
+	}
 }

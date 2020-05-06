@@ -9,14 +9,13 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.Query;
 
-import dev.teamnight.nightweb.core.entities.ApplicationData;
 import dev.teamnight.nightweb.core.entities.ModuleData;
 
 /**
  * @author Jonas
  *
  */
-public class ModuleService extends DatabaseService<ModuleData> {
+public class ModuleService extends AbstractService<ModuleData> {
 
 	/**
 	 * @param factory

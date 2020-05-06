@@ -154,7 +154,7 @@ public class JettyApplicationContext implements ApplicationContext {
 
 	@Override
 	public Class<? extends WebSession> getSessionType() {
-		return this.sessionType;
+		return this.sessionType != null ? this.sessionType : WebSession.class;
 	}
 	
 	@Override

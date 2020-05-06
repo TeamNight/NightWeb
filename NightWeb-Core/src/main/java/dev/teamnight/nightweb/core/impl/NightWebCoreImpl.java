@@ -4,17 +4,12 @@
 package dev.teamnight.nightweb.core.impl;
 
 import java.io.IOException;
-import java.lang.module.ModuleDescriptor.Opens;
-import java.lang.module.ModuleReader;
-import java.lang.module.ModuleReference;
-import java.lang.module.ResolvedModule;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -31,7 +26,7 @@ import org.hibernate.cfg.Configuration;
 
 import dev.teamnight.nightweb.core.Application;
 import dev.teamnight.nightweb.core.ApplicationContext;
-import dev.teamnight.nightweb.core.NightModule;
+import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.Server;
 import dev.teamnight.nightweb.core.WebSession;
@@ -47,6 +42,7 @@ import dev.teamnight.nightweb.core.module.JavaModuleLoader;
 import dev.teamnight.nightweb.core.module.ModuleManager;
 import dev.teamnight.nightweb.core.module.ModuleManagerImpl;
 import dev.teamnight.nightweb.core.service.ApplicationService;
+import dev.teamnight.nightweb.core.service.ErrorLogService;
 import dev.teamnight.nightweb.core.service.GroupService;
 import dev.teamnight.nightweb.core.service.ModuleService;
 import dev.teamnight.nightweb.core.service.PermissionService;
@@ -54,6 +50,8 @@ import dev.teamnight.nightweb.core.service.ServiceManager;
 import dev.teamnight.nightweb.core.service.ServiceManagerImpl;
 import dev.teamnight.nightweb.core.service.UserService;
 import dev.teamnight.nightweb.core.servlets.TestServlet;
+import dev.teamnight.nightweb.core.template.TemplateManager;
+import dev.teamnight.nightweb.core.template.TemplateManagerImpl;
 
 public class NightWebCoreImpl extends Application implements NightWebCore {
 
@@ -71,10 +69,15 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	private UserService userService;
 	private GroupService groupService;
 	private PermissionService permService;
+	
+	private TemplateManager templateManager;
 
 	private XmlConfiguration config;
 	
+	private List<WebSession> sessions = new ArrayList<WebSession>();
+	
 	public NightWebCoreImpl() {
+		NightWeb.setCoreApplication(this);
 		//TODO Implement public static main(NightWeb) by using modules from /modules or /libraries
 		NightWebCoreImpl.LOGGER = LogManager.getLogger(getClass());
 		
@@ -216,6 +219,10 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		this.serviceMan = new ServiceManagerImpl(this.sessionFactory);
 		this.serviceMan.register(ApplicationService.class);
 		this.serviceMan.register(ModuleService.class);
+		this.serviceMan.register(UserService.class);
+		this.serviceMan.register(ErrorLogService.class);
+		
+		this.templateManager = new TemplateManagerImpl(WORKING_DIR.resolve("templates"));
 		
 		LOGGER.info("Enabling core application...");
 		ApplicationService appService = this.serviceMan.getService(ApplicationService.class);
@@ -287,8 +294,8 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	}
 
 	@Override
-	public String getTemplateManager() {
-		return null;
+	public TemplateManager getTemplateManager() {
+		return this.templateManager;
 	}
 
 	@Override
@@ -312,20 +319,18 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	}
 
 	@Override
-	public String getSessions() {
-		return null;
+	public List<WebSession> getSessions() {
+		return this.sessions;
 	}
 	
 	@Override
 	public void addSession(WebSession session) {
-		// TODO Auto-generated method stub
-		
+		this.sessions.add(session);
 	}
 	
 	@Override
 	public void removeSession(WebSession session) {
-		// TODO Auto-generated method stub
-		
+		this.sessions.remove(session);
 	}
 	
 	public ModuleManager getModuleManager() {
@@ -334,6 +339,11 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	
 	public SessionFactory getSessionFactory() {
 		return sessionFactory;
+	}
+	
+	@Override
+	public boolean isDebugModeEnabled() {
+		return this.config.isDebug();
 	}
 
 	@Override

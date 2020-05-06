@@ -7,11 +7,7 @@ import javax.servlet.http.HttpServlet;
 
 import org.hibernate.Session;
 
-import dev.teamnight.nightweb.core.impl.ModuleContext;
-
 public abstract class JavaModule implements NightModule {
-
-	// TODO Implement class
 	
 	private boolean enabled;
 	private ModuleContext context;
@@ -43,20 +39,17 @@ public abstract class JavaModule implements NightModule {
 
 	@Override
 	public void addServlet(Class<? extends HttpServlet> servlet) throws IllegalArgumentException {
-		// TODO Auto-generated method stub
-		
+		this.context.registerServlet(servlet);
 	}
 
 	@Override
 	public void addServlet(Class<? extends HttpServlet> servlet, String pathSpec) {
-		// TODO Auto-generated method stub
-		
+		this.context.registerServlet(servlet, pathSpec);
 	}
 
 	@Override
 	public Session getDatabase() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.context.getDatabaseSession();
 	}
 	
 	@Override

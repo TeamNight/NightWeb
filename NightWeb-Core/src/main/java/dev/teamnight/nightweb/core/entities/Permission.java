@@ -116,9 +116,24 @@ public class Permission {
 		FLAG
 	}
 	
+	/**
+	 * A tribool can contain 3 values, true, neutral and false.
+	 * @author Jonas
+	 *
+	 */
 	public enum Tribool {
+		/**
+		 * Allows a permission for a user
+		 */
 		TRUE("ALLOW"),
+		/**
+		 * Ignores (denies) a permission for a user.
+		 * Depending on other groups, this might be a deny.
+		 */
 		NEUTRAL("UNSET"),
+		/**
+		 * Strongly denies a permission with no possibility for allowance.
+		 */
 		FALSE("DENY");
 		
 		private String asString;

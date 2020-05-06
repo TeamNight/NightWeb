@@ -28,19 +28,34 @@ public class Group implements Comparable<Group>, PermissionOwner<GroupPermission
 	
 	@Id
 	@GeneratedValue
+	@Column(updatable = false, nullable = false)
 	private long id;
 	
-	@Column
+	@Column(length = 512, nullable = false, unique = true)
 	private String name;
 	
 	@Column
 	private int priority;
 	
+	@Column
+	private boolean staffGroup;
+	
+	@Column
+	private String bannerStyleClass;
+	@Column
+	private String bannerText;
+	
 	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "group")
 	@OrderBy("name ASC")
 	private List<GroupPermission> permissions;
 	
-	public Group() {}
+	protected Group() {}
+	
+	public Group(String name) {
+		this.name = name;
+		this.staffGroup = false;
+		this.permissions = new ArrayList<GroupPermission>();
+	}
 	
 	public boolean equals(Group other) {
 		if(this.id == other.id) {
@@ -84,6 +99,27 @@ public class Group implements Comparable<Group>, PermissionOwner<GroupPermission
 	public int getPriority() {
 		return priority;
 	}
+	
+	/**
+	 * @return the staffGroup
+	 */
+	public boolean isStaffGroup() {
+		return staffGroup;
+	}
+	
+	/**
+	 * @return the bannerStyleClass
+	 */
+	public String getBannerStyleClass() {
+		return bannerStyleClass;
+	}
+	
+	/**
+	 * @return the bannerText
+	 */
+	public String getBannerText() {
+		return bannerText;
+	}
 
 	/**
 	 * @param id the id to set
@@ -104,6 +140,27 @@ public class Group implements Comparable<Group>, PermissionOwner<GroupPermission
 	 */
 	public void setPriority(int priority) {
 		this.priority = priority;
+	}
+	
+	/**
+	 * @param staffGroup the staffGroup to set
+	 */
+	public void setStaffGroup(boolean staffGroup) {
+		this.staffGroup = staffGroup;
+	}
+	
+	/**
+	 * @param bannerStyleClass the bannerStyleClass to set
+	 */
+	public void setBannerStyleClass(String bannerStyleClass) {
+		this.bannerStyleClass = bannerStyleClass;
+	}
+	
+	/**
+	 * @param bannerText the bannerText to set
+	 */
+	public void setBannerText(String bannerText) {
+		this.bannerText = bannerText;
 	}
 	
 	// ----------------------------------------------------------------------- //
@@ -127,10 +184,23 @@ public class Group implements Comparable<Group>, PermissionOwner<GroupPermission
 	}
 
 	@Override
-	public boolean hasPermission(String permission) {
-		//TODO IMPORTANT IMPLEMENT
+	public boolean hasPermission(String permissionName) {
+		GroupPermission permission = this.permissions.stream()
+				.filter(perm -> perm.getName().equalsIgnoreCase(permissionName))
+				.filter(perm -> perm.getType() == Permission.Type.FLAG)
+				.filter(perm -> perm.getAsBoolean())
+				.findFirst()
+				.orElse(null);
 		
+		if(permission != null) {
+			return true;
+		}
 		return false;
+	}
+	
+	@Override
+	public GroupPermission getPermission(String permissionName) {
+		return this.permissions.stream().filter(perm -> perm.getName().equalsIgnoreCase(permissionName)).findFirst().orElse(null);
 	}
 
 	@Override

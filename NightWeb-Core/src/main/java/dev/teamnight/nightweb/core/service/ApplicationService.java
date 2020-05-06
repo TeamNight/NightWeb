@@ -15,7 +15,7 @@ import dev.teamnight.nightweb.core.entities.ApplicationData;
  * @author Jonas
  *
  */
-public class ApplicationService extends DatabaseService<ApplicationData> {
+public class ApplicationService extends AbstractService<ApplicationData> {
 
 	/**
 	 * @param factory
@@ -34,7 +34,7 @@ public class ApplicationService extends DatabaseService<ApplicationData> {
 		Session session = this.getSessionFactory().openSession();
 		session.beginTransaction();
 		
-		Query<ApplicationData> query = session.createQuery("FROM " + ApplicationData.class.getSimpleName() + " A WHERE A.identifier = :identifier", ApplicationData.class);
+		Query<ApplicationData> query = session.createQuery("FROM ApplicationData A WHERE A.identifier = :identifier", ApplicationData.class);
 		query.setParameter("identifier", identifier);
 		
 		ApplicationData data = query.uniqueResult();
@@ -54,7 +54,7 @@ public class ApplicationService extends DatabaseService<ApplicationData> {
 		Session session = this.getSessionFactory().openSession();
 		session.beginTransaction();
 		
-		Query<ApplicationData> query = session.createQuery("FROM " + ApplicationData.class.getSimpleName() + " A WHERE A.name = :name", ApplicationData.class);
+		Query<ApplicationData> query = session.createQuery("FROM ApplicationData A WHERE A.name = :name", ApplicationData.class);
 		query.setParameter("name", name);
 		
 		List<ApplicationData> dataList = query.getResultList();

@@ -46,12 +46,16 @@ public class NightJettyServletHolder extends ServletHolder {
 	@Override
 	public void handle(Request baseRequest, ServletRequest request, ServletResponse response)
 			throws ServletException, UnavailableException, IOException {
+		if(this.ctx == null) {
+			throw new IllegalStateException("Context was not set");
+		}
+		
 		request.setAttribute("context", this.ctx);
 		
 		if(request instanceof HttpServletRequest) {
 			HttpServletRequest httpRequest = (HttpServletRequest) request;
 			
-			if(httpRequest.getSession().getAttribute("session") == null) {
+			if(httpRequest.getSession(true).getAttribute("session") == null) {
 				Class<? extends WebSession> type = this.ctx.getSessionType();
 				
 				try {
