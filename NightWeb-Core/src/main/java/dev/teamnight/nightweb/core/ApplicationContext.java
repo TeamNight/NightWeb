@@ -19,4 +19,6 @@ public interface ApplicationContext extends Context {
 	
 	public void registerServlet(Class<? extends HttpServlet> servlet, String pathSpec, Context ctx);
 	
+	public void registerServletHolder(ServletHolder holder, String pathSpec);
+	
 }

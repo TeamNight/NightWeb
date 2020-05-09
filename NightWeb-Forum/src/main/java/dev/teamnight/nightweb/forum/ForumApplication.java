@@ -25,7 +25,7 @@ public class ForumApplication extends Application {
 	}
 
 	@Override
-	public void init(ApplicationContext ctx) {
+	public void start(ApplicationContext ctx) {
 		LOGGER.info("Starting Forum Application");
 	}
 

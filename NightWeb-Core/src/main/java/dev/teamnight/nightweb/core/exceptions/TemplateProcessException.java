@@ -1,4 +1,4 @@
-package dev.teamnight.nightweb.core.template;
+package dev.teamnight.nightweb.core.exceptions;
 
 import java.io.PrintStream;
 import java.io.PrintWriter;

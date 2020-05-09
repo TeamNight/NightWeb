@@ -8,6 +8,7 @@ import java.util.List;
 
 import dev.teamnight.nightweb.core.Application;
 import dev.teamnight.nightweb.core.NightModule;
+import dev.teamnight.nightweb.core.exceptions.ModuleException;
 
 public interface ModuleManager {
 	

@@ -25,6 +25,8 @@ import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.service.ServiceManager;
+import dev.teamnight.nightweb.core.template.TemplateBuilder;
+import dev.teamnight.nightweb.core.template.TemplateManager;
 
 public class JettyApplicationContext implements ApplicationContext {
 
@@ -33,6 +35,7 @@ public class JettyApplicationContext implements ApplicationContext {
 	private final ServletContextHandler handler;
 	private final SessionFactory factory;
 	private final ServiceManager serviceManager;
+	private final TemplateManager templateManager;
 	private Application application;
 
 	private Class<? extends WebSession> sessionType;
@@ -42,10 +45,11 @@ public class JettyApplicationContext implements ApplicationContext {
 	 * @param factory
 	 * @param serviceManager
 	 */
-	public JettyApplicationContext(ServletContextHandler handler, SessionFactory factory, ServiceManager serviceManager) {
+	public JettyApplicationContext(ServletContextHandler handler, SessionFactory factory, ServiceManager serviceManager, TemplateManager templateManager) {
 		this.handler = handler;
 		this.factory = factory;
 		this.serviceManager = serviceManager;
+		this.templateManager = templateManager;
 	}
 
 	@Override
@@ -64,6 +68,7 @@ public class JettyApplicationContext implements ApplicationContext {
 		if(auth != null) {
 			if(webServlet != null) {
 				for(String url : webServlet.urlPatterns()) {
+					LogManager.getLogger().info("Adding auth to " + url + "." + servlet.getCanonicalName()  + ": " + (servlet.getAnnotation(Authenticated.class) != null));
 					this.handler.addFilter(authenticationFilter, url, EnumSet.allOf(DispatcherType.class));
 				}
 			} else {
@@ -78,6 +83,7 @@ public class JettyApplicationContext implements ApplicationContext {
 	public void registerServlet(Class<? extends HttpServlet> servlet, String pathSpec) {
 		for(Annotation annotation : servlet.getAnnotations()) {
 			if(annotation instanceof Authenticated) {
+				LogManager.getLogger().info("Adding auth to " + pathSpec + "." + servlet.getCanonicalName()  + ": " + (servlet.getAnnotation(Authenticated.class) != null));
 				this.handler.addFilter(authenticationFilter, pathSpec, EnumSet.allOf(DispatcherType.class));
 			}
 		}
@@ -96,6 +102,7 @@ public class JettyApplicationContext implements ApplicationContext {
 		Authenticated auth = servlet.getAnnotation(Authenticated.class);
 		if(auth != null) {
 			for(String url : webServlet.urlPatterns()) {
+				LogManager.getLogger().info("Adding auth to " + url + "." + servlet.getCanonicalName()  + ": " + (servlet.getAnnotation(Authenticated.class) != null));
 				this.handler.addFilter(authenticationFilter, url, EnumSet.allOf(DispatcherType.class));
 			}
 			
@@ -106,6 +113,17 @@ public class JettyApplicationContext implements ApplicationContext {
 		for(String url : webServlet.urlPatterns()) {
 			this.registerServlet(holder, url);
 		}
+	}
+
+	@Override
+	public void registerServletHolder(ServletHolder holder, String pathSpec) {
+		Authenticated auth = holder.getHeldClass().getAnnotation(Authenticated.class);
+		if(auth != null) {
+			LogManager.getLogger().info("Adding auth to " + pathSpec + "." + holder.getHeldClass().getCanonicalName()  + ": " + (holder.getHeldClass().getAnnotation(Authenticated.class) != null));
+			this.handler.addFilter(authenticationFilter, pathSpec, EnumSet.allOf(DispatcherType.class));
+		}
+		
+		this.registerServlet(holder, pathSpec);
 	}
 
 	private void registerServlet(ServletHolder holder, String pathSpec) {
@@ -170,6 +188,16 @@ public class JettyApplicationContext implements ApplicationContext {
 		}
 		
 		this.sessionType = sessionType;
+	}
+
+	@Override
+	public TemplateManager getTemplateManager() {
+		return this.templateManager;
+	}
+	
+	@Override
+	public TemplateBuilder getTemplate(String templatePath) {
+		return this.templateManager.builder(templatePath, this);
 	}
 
 }

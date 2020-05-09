@@ -9,6 +9,7 @@ import java.util.HashMap;
 
 import javax.servlet.http.HttpServletResponse;
 
+import dev.teamnight.nightweb.core.exceptions.TemplateProcessException;
 import dev.teamnight.nightweb.core.template.AlertMessage.Type;
 import freemarker.core.ParseException;
 import freemarker.template.MalformedTemplateNameException;
@@ -31,6 +32,13 @@ public class TemplateBuilder {
 			throws TemplateNotFoundException, MalformedTemplateNameException, ParseException, IOException {
 		this.tmpMan = templateManager;
 		this.temp = template;
+	}
+	
+	/**
+	 * @return the template Manager
+	 */
+	public TemplateManager getTemplateManager() {
+		return tmpMan;
 	}
 	
 	public TemplateBuilder assign(String var, Object obj) {

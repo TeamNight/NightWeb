@@ -21,11 +21,12 @@ import org.apache.logging.log4j.Logger;
 
 import dev.teamnight.nightweb.core.Application;
 import dev.teamnight.nightweb.core.ApplicationContext;
-import dev.teamnight.nightweb.core.ModuleContext;
 import dev.teamnight.nightweb.core.NightModule;
+import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.entities.ModuleData;
-import dev.teamnight.nightweb.core.impl.NightWebCoreImpl;
+import dev.teamnight.nightweb.core.exceptions.ModuleException;
+import dev.teamnight.nightweb.core.impl.ModuleContext;
 import dev.teamnight.nightweb.core.service.ModuleService;
 
 public class ModuleManagerImpl implements ModuleManager {
@@ -273,6 +274,8 @@ public class ModuleManagerImpl implements ModuleManager {
 		} else {
 			Application app = (Application) module;
 			
+			LOGGER.debug("Application class: " + app.getClass().getCanonicalName());
+			
 			ApplicationContext ctx = null;
 			try {
 				ctx = this.core.getServer().getContext(app);
@@ -393,7 +396,7 @@ public class ModuleManagerImpl implements ModuleManager {
 		data.setIdentifier(holder.getMetaFile().getModuleIdentifier());
 		data.setName(holder.getMetaFile().getModuleName());
 		data.setVersion(holder.getMetaFile().getVersion());
-		data.setPath(NightWebCoreImpl.WORKING_DIR.relativize(holder.getMetaFile().getModulePath()).toString());
+		data.setPath(NightWeb.WORKING_DIR.relativize(holder.getMetaFile().getModulePath()).toString());
 		data.setEnabled(true);
 		
 		service.save(data);

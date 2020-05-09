@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 import javax.persistence.CascadeType;
@@ -77,6 +78,9 @@ public class User implements PermissionOwner<UserPermission> {
 	@OrderBy("name ASC")
 	private List<UserPermission> permissions;
 	
+	@Column(name = "language")
+	private String languageCode;
+	
 	@Column(nullable = false)
 	private boolean disabled;
 	
@@ -89,6 +93,7 @@ public class User implements PermissionOwner<UserPermission> {
 		this.groups = new ArrayList<Group>();
 		this.permissions = new ArrayList<UserPermission>();
 		this.disabled = true;
+		this.languageCode = Locale.ENGLISH.toLanguageTag();
 	}
 
 	// ----------------------------------------------------------------------- //
@@ -165,6 +170,13 @@ public class User implements PermissionOwner<UserPermission> {
 	public List<Group> getGroups() {
 		Collections.sort(this.groups);
 		return groups;
+	}
+	
+	/**
+	 * @return the languageCode
+	 */
+	public String getLanguageCode() {
+		return languageCode;
 	}
 
 	/**
@@ -249,6 +261,13 @@ public class User implements PermissionOwner<UserPermission> {
 	 */
 	public void setGroups(List<Group> groups) {
 		this.groups = groups;
+	}
+	
+	/**
+	 * @param languageCode the languageCode to set
+	 */
+	public void setLanguageCode(String languageCode) {
+		this.languageCode = languageCode;
 	}
 
 	/**

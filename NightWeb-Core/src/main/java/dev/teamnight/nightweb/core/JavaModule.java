@@ -7,6 +7,8 @@ import javax.servlet.http.HttpServlet;
 
 import org.hibernate.Session;
 
+import dev.teamnight.nightweb.core.impl.ModuleContext;
+
 public abstract class JavaModule implements NightModule {
 	
 	private boolean enabled;
@@ -14,11 +16,7 @@ public abstract class JavaModule implements NightModule {
 	
 	private String identifier;
 
-	public abstract void init(ModuleContext ctx);
-	
-	public ModuleContext getModuleContext() {
-		return this.context;
-	}
+	public abstract void start(Context ctx);
 	
 	@Override
 	public void init(Context ctx) {
@@ -28,7 +26,7 @@ public abstract class JavaModule implements NightModule {
 		
 		this.context = (ModuleContext) ctx;
 		
-		this.init(this.context);
+		this.start(this.context);
 		this.enabled = true;
 	}
 	

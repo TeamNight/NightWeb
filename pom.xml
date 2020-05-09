@@ -84,6 +84,11 @@
 	  <artifactId>freemarker</artifactId>
 	  <version>2.3.30</version>
 	</dependency>
+  	<dependency>
+  		<groupId>commons-validator</groupId>
+  		<artifactId>commons-validator</artifactId>
+  		<version>1.6</version>
+  	</dependency>
   </dependencies>
 
   <build>

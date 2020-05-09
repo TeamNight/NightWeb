@@ -5,6 +5,8 @@ package dev.teamnight.nightweb.core;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Date;
 
 import dev.teamnight.nightweb.core.entities.ErrorLogEntry;
@@ -17,6 +19,12 @@ import dev.teamnight.nightweb.core.template.TemplateManager;
 
 public final class NightWeb {
 
+	public static final Path WORKING_DIR = Paths.get(System.getProperty("user.dir"));
+	public static final Path MODULES_DIR = WORKING_DIR.resolve("modules");
+	public static final Path TEMPLATES_DIR = WORKING_DIR.resolve("templates");
+	public static final Path STATIC_DIR = WORKING_DIR.resolve("static");
+	public static final Path LANG_DIR = WORKING_DIR.resolve("languages");
+	
 	private static NightWebCore core;
 	
 	public static NightWebCore getCoreApplication() {

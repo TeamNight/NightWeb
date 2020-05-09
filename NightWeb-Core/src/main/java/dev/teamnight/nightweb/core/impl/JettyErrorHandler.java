@@ -16,10 +16,10 @@ import org.eclipse.jetty.server.handler.ErrorHandler;
 
 import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.entities.ErrorLogEntry;
+import dev.teamnight.nightweb.core.exceptions.TemplateProcessException;
 import dev.teamnight.nightweb.core.service.ErrorLogService;
 import dev.teamnight.nightweb.core.template.TemplateBuilder;
 import dev.teamnight.nightweb.core.template.TemplateManager;
-import dev.teamnight.nightweb.core.template.TemplateProcessException;
 
 /**
  * @author Jonas

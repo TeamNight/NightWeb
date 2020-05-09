@@ -20,6 +20,7 @@ import javax.xml.bind.Unmarshaller;
 
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightModule;
+import dev.teamnight.nightweb.core.exceptions.ModuleException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

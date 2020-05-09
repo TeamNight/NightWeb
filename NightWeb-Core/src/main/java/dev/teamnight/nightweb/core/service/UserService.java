@@ -2,6 +2,7 @@ package dev.teamnight.nightweb.core.service;
 
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.query.Query;
 
 import dev.teamnight.nightweb.core.entities.User;
@@ -28,7 +29,6 @@ public class UserService extends AbstractService<User> {
 		
 		T user = query.uniqueResult();
 		session.getTransaction().commit();
-		session.close();
 		
 		return user;
 	}
@@ -46,8 +46,16 @@ public class UserService extends AbstractService<User> {
 		
 		T user = query.uniqueResult();
 		session.getTransaction().commit();
-		session.close();
 		
 		return user;
+	}
+	
+	@Override
+	public void save(User value) {
+		try {
+			super.save(value);
+		} catch(ConstraintViolationException e) {
+			
+		}
 	}
 }

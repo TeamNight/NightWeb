@@ -39,7 +39,6 @@ public class ApplicationService extends AbstractService<ApplicationData> {
 		
 		ApplicationData data = query.uniqueResult();
 		session.getTransaction().commit();
-		session.close();
 		
 		return data;
 	}
@@ -59,7 +58,6 @@ public class ApplicationService extends AbstractService<ApplicationData> {
 		
 		List<ApplicationData> dataList = query.getResultList();
 		session.getTransaction().commit();
-		session.close();
 		
 		return dataList;
 	}

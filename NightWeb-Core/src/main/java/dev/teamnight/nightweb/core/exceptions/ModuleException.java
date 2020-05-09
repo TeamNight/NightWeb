@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2020 Jonas Müller, Jannik Müller
  */
-package dev.teamnight.nightweb.core.module;
+package dev.teamnight.nightweb.core.exceptions;
 
 public class ModuleException extends RuntimeException {
 

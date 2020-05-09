@@ -33,7 +33,6 @@ public class ModuleService extends AbstractService<ModuleData> {
 		
 		ModuleData data = query.uniqueResult();
 		session.getTransaction().commit();
-		session.close();
 		
 		return data;
 	}
@@ -47,7 +46,6 @@ public class ModuleService extends AbstractService<ModuleData> {
 		
 		List<ModuleData> dataList = query.getResultList();
 		session.getTransaction().commit();
-		session.close();
 		
 		return dataList;
 	}

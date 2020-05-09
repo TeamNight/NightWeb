@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightModule;
+import dev.teamnight.nightweb.core.exceptions.ModuleException;
 
 public interface ModuleLoader {
 

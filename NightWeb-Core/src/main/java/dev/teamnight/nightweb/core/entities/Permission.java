@@ -10,9 +10,10 @@ import javax.persistence.Id;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "permissions")
+@Table(name = "permissions", uniqueConstraints = @UniqueConstraint(columnNames = {"name"})) //the Constraint shall not be available in the subclasses
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 public class Permission {
 
@@ -28,6 +29,34 @@ public class Permission {
 	
 	@Column(nullable = false)
 	private String value;
+	
+	protected Permission() {}
+	
+	public Permission(String name, short value) {
+		this(name, Type.NUMBER, String.valueOf(value));
+	}
+	
+	public Permission(String name, int value) {
+		this(name, Type.NUMBER, String.valueOf(value));
+	}
+	
+	public Permission(String name, long value) {
+		this(name, Type.NUMBER, String.valueOf(value));
+	}
+	
+	public Permission(String name, double value) {
+		this(name, Type.NUMBER, String.valueOf(value));
+	}
+	
+	public Permission(String name, Tribool value) {
+		this(name, Type.FLAG, value.getAsString());
+	}
+	
+	public Permission(String name, Permission.Type type, String value) {
+		this.name = name;
+		this.type = type;
+		this.value = value;
+	}
 	
 	/**
 	 * @return the id

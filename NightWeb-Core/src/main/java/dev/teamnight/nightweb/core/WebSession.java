@@ -27,7 +27,7 @@ public class WebSession implements HttpSessionBindingListener {
 	private User user;
 	
 	public static WebSession getSession(HttpServletRequest request) {
-		Object sessionObj = request.getAttribute("session");
+		Object sessionObj = request.getSession().getAttribute("session");
 		
 		if(sessionObj == null) {
 			return null;
@@ -37,7 +37,7 @@ public class WebSession implements HttpSessionBindingListener {
 	}
 	
 	public static <T extends WebSession> T getSession(HttpServletRequest request, Class<T> expectedType) {
-		Object sessionObj = request.getAttribute("session");
+		Object sessionObj = request.getSession().getAttribute("session");
 		
 		if(sessionObj == null) {
 			return null;

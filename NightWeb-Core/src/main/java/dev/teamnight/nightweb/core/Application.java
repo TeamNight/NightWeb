@@ -16,7 +16,7 @@ public abstract class Application implements NightModule {
 	
 	private String identifier;
 
-	public abstract void init(ApplicationContext ctx);
+	public abstract void start(ApplicationContext ctx);
 	
 	@Override
 	public void init(Context ctx) {
@@ -26,7 +26,7 @@ public abstract class Application implements NightModule {
 		
 		this.context = (ApplicationContext) ctx;
 		
-		this.init(this.context);
+		this.start(this.context);
 		this.enabled = true;
 	}
 

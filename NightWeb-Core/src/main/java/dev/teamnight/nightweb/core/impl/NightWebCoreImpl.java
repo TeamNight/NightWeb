@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,6 +20,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.ServletHolder;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 
@@ -49,13 +50,12 @@ import dev.teamnight.nightweb.core.service.PermissionService;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 import dev.teamnight.nightweb.core.service.ServiceManagerImpl;
 import dev.teamnight.nightweb.core.service.UserService;
+import dev.teamnight.nightweb.core.servlets.RegistrationServlet;
 import dev.teamnight.nightweb.core.servlets.TestServlet;
 import dev.teamnight.nightweb.core.template.TemplateManager;
 import dev.teamnight.nightweb.core.template.TemplateManagerImpl;
 
 public class NightWebCoreImpl extends Application implements NightWebCore {
-
-	public static final Path WORKING_DIR = Paths.get(System.getProperty("user.dir"));
 	
 	private static Logger LOGGER;
 
@@ -81,8 +81,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		//TODO Implement public static main(NightWeb) by using modules from /modules or /libraries
 		NightWebCoreImpl.LOGGER = LogManager.getLogger(getClass());
 		
-		Path workingDir = NightWebCoreImpl.WORKING_DIR;
-		Path modulesDir = workingDir.resolve("modules");
+		Path workingDir = NightWeb.WORKING_DIR;
 		Path configPath = workingDir.resolve("config.xml");
 		Path hibernateConfigPath = workingDir.resolve("hibernate.cfg.xml");
 		
@@ -156,15 +155,11 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 			return;
 		}
 		
-		if(!Files.exists(modulesDir, LinkOption.NOFOLLOW_LINKS)) {
-			LOGGER.info("Creating modules directory at" + modulesDir);
-			try {
-				Files.createDirectory(modulesDir);
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(1);
-			}
-		}
+		//Create directories
+		this.createIfNotExists(NightWeb.MODULES_DIR);
+		this.createIfNotExists(NightWeb.STATIC_DIR);
+		this.createIfNotExists(NightWeb.TEMPLATES_DIR);
+		this.createIfNotExists(NightWeb.LANG_DIR);
 		
 		this.server = new JettyServer(this, this.config);
 		
@@ -201,6 +196,10 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 //			//TODO Do the Hibernate Conf thing
 //		});
 		this.moduleManager.registerCustomizer(module -> {
+			if(NightWebCoreImpl.this.sessionFactory != null) {
+				throw new IllegalStateException("Module can not be loaded and configured after startup.");
+			}
+			
 			List<Class<?>> classList = new ArrayList<Class<?>>();
 			
 			module.configure(classList);
@@ -209,7 +208,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		});
 		
 		LOGGER.info("Loading modules...");
-		this.moduleManager.loadModules(modulesDir);
+		this.moduleManager.loadModules(NightWeb.MODULES_DIR);
 		
 		this.sessionFactory = hibernateConf.buildSessionFactory();
 		this.server.setSessionFactory(this.sessionFactory);
@@ -222,7 +221,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		this.serviceMan.register(UserService.class);
 		this.serviceMan.register(ErrorLogService.class);
 		
-		this.templateManager = new TemplateManagerImpl(WORKING_DIR.resolve("templates"));
+		this.templateManager = new TemplateManagerImpl(NightWeb.TEMPLATES_DIR, NightWeb.LANG_DIR);
 		
 		LOGGER.info("Enabling core application...");
 		ApplicationService appService = this.serviceMan.getService(ApplicationService.class);
@@ -249,6 +248,21 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		this.server.start();
 	}
 	
+	/**
+	 * @param directory
+	 */
+	private void createIfNotExists(Path directory) {
+		if(!Files.exists(directory, LinkOption.NOFOLLOW_LINKS)) {
+			LOGGER.info("Creating directory at" + directory);
+			try {
+				Files.createDirectory(directory);
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(1);
+			}
+		}
+	}
+
 	@Override
 	public String getImplementationName() {
 		return "Standard";
@@ -352,8 +366,16 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	}
 
 	@Override
-	public void init(ApplicationContext ctx) {
-		ctx.registerServlet(TestServlet.class, "/*");
+	public void start(ApplicationContext ctx) {
+		ServletHolder staticHolder = new ServletHolder("static", DefaultServlet.class);
+		staticHolder.setInitParameter("resourceBase", NightWeb.STATIC_DIR.toAbsolutePath().toString());
+		staticHolder.setInitParameter("dirAllowed", "false");
+		staticHolder.setInitParameter("pathInfoOnly", "true");
+		
+		ctx.registerServletHolder(staticHolder, "/static/*");
+		
+		ctx.registerServlet(TestServlet.class, "/");
+		ctx.registerServlet(RegistrationServlet.class, "/register");
 	}
 
 }

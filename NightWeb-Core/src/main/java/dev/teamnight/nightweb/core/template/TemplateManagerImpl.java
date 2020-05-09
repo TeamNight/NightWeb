@@ -12,14 +12,19 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import javax.xml.bind.JAXBException;
+
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
+import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightWeb;
+import dev.teamnight.nightweb.core.exceptions.TemplateProcessException;
 import freemarker.core.HTMLOutputFormat;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateExceptionHandler;
+import freemarker.template.TemplateModel;
 import freemarker.template.TemplateModelException;
 
 /**
@@ -31,12 +36,21 @@ public class TemplateManagerImpl implements TemplateManager {
 	private Configuration configuration;
 	private Path templateDir;
 	
+	private LanguageManager languageManager;
+	
 	private Cache<String, Template> templateCache = CacheBuilder.newBuilder()
 			.maximumSize(10000)
 			.expireAfterAccess(3, TimeUnit.DAYS)
 			.build();
 
-	public TemplateManagerImpl(Path templateDir) {
+	public TemplateManagerImpl(Path templateDir, Path languageDir) {
+		try {
+			this.languageManager = new LanguageManagerImpl();
+			this.languageManager.loadLanguages(languageDir);
+		} catch (JAXBException e) {
+			this.languageManager = null;
+			e.printStackTrace();
+		}
 		this.configuration = new Configuration(Configuration.VERSION_2_3_30);
 		try {
 			this.configuration.setDirectoryForTemplateLoading(templateDir.toAbsolutePath().toFile());
@@ -47,6 +61,15 @@ public class TemplateManagerImpl implements TemplateManager {
 			this.configuration.setOutputFormat(HTMLOutputFormat.INSTANCE);
 			
 			this.configuration.setSharedVariable("domain", NightWeb.getCoreApplication().getDomain());
+			this.configuration.setSharedVariable("languageManager", this.languageManager);
+			
+			Menu mainMenu = new Menu();
+			mainMenu.setName("mainMenu");
+			mainMenu.setActiveMenu("Home");
+			mainMenu.addLeftItem(1, mainMenu.new Item("Home", "/"));
+			mainMenu.addLeftItem(2, mainMenu.new Item("Articles", "/"));
+			
+			this.configuration.setSharedVariable("mainMenu", mainMenu);
 		} catch (IOException | TemplateModelException e) {
 			e.printStackTrace();
 		}
@@ -85,6 +108,19 @@ public class TemplateManagerImpl implements TemplateManager {
 			});
 			
 			return new TemplateBuilder(this, template);
+		} catch (ExecutionException | IOException e) {
+			throw new TemplateProcessException(e);
+		}
+	}
+	
+	@Override
+	public TemplateBuilder builder(String templatePath, Context ctx) throws TemplateProcessException {
+		try {
+			Template template = this.templateCache.get(templatePath, () -> {
+				return this.configuration.getTemplate(templatePath);
+			});
+			
+			return new TemplateBuilder(this, template).assign("contextPath", ctx.getContextPath());
 		} catch (ExecutionException | IOException e) {
 			throw new TemplateProcessException(e);
 		}
@@ -182,6 +218,21 @@ public class TemplateManagerImpl implements TemplateManager {
 	@Override
 	public void clearTemplateCache() {
 		this.templateCache.invalidateAll();
+	}
+	
+	@Override
+	public TemplateModel getSharedVariable(String key) {
+		return this.configuration.getSharedVariable(key);
+	}
+	
+	@Override
+	public void setSharedVariable(String key, Object value) throws TemplateModelException {
+		this.configuration.setSharedVariable(key, value);
+	}
+
+	@Override
+	public LanguageManager getLanguageManager() {
+		return this.languageManager;
 	}
 
 }

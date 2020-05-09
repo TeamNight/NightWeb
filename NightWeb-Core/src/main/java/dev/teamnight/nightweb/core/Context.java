@@ -10,6 +10,8 @@ import org.apache.logging.log4j.Logger;
 import org.hibernate.Session;
 
 import dev.teamnight.nightweb.core.service.ServiceManager;
+import dev.teamnight.nightweb.core.template.TemplateBuilder;
+import dev.teamnight.nightweb.core.template.TemplateManager;
 
 public interface Context {
 	
@@ -40,6 +42,17 @@ public interface Context {
 	 * @return {@link dev.teamnight.nightweb.core.services.ServiceManager} the Service Manager
 	 */
 	public ServiceManager getServiceManager();
+	
+	/**
+	 * Returns the global Template Manager caching all templates
+	 * @return {@link dev.teamnight.nightweb.core.template.TemplateManager} the template Manager
+	 */
+	public TemplateManager getTemplateManager();
+	
+	/**
+	 * Shortcut and helper for TemplateManager#builder(String, Context)
+	 */
+	public TemplateBuilder getTemplate(String templatePath);
 	
 	/**
 	 * Returns a database session.

@@ -6,6 +6,7 @@ package dev.teamnight.nightweb.core.impl;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.CustomRequestLog;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.SecureRequestCustomizer;
@@ -31,6 +32,7 @@ import dev.teamnight.nightweb.core.service.ApplicationService;
 
 public class JettyServer implements Server {
 
+	private static final String RequestLogFormat = "%{client}a - %u \"%r\" %s %O \"%{Referer}i\" \"%{User-Agent}i\"";
 	private static Logger LOGGER = LogManager.getLogger();
 	
 	private org.eclipse.jetty.server.Server server;
@@ -99,6 +101,7 @@ public class JettyServer implements Server {
 		
 		server.setHandler(handlers);
 		server.setErrorHandler(new JettyErrorHandler(NightWeb.getTemplateManager()));
+		server.setRequestLog(new CustomRequestLog(new Log4jRequestLogWriter(JettyServer.class), JettyServer.RequestLogFormat));
 	}
 	
 	public boolean isSSLEnabled() {
@@ -211,7 +214,7 @@ public class JettyServer implements Server {
 		handler.setInitParameter("org.eclipse.jetty.servlet.SessionIdPathParameterName", "none");
 		handler.setContextPath(data.getContextPath());
 		
-		ApplicationContext ctx = new JettyApplicationContext(handler, this.sessionFactory, this.core.getServiceManager());
+		ApplicationContext ctx = new JettyApplicationContext(handler, this.sessionFactory, this.core.getServiceManager(), this.core.getTemplateManager());
 		ctx.setModule(app);
 		
 		this.servletContextHandlers.addHandler(handler);
