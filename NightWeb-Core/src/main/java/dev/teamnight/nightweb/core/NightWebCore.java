@@ -5,6 +5,7 @@ package dev.teamnight.nightweb.core;
 
 import java.util.List;
 
+import dev.teamnight.nightweb.core.entities.ModuleData;
 import dev.teamnight.nightweb.core.service.GroupService;
 import dev.teamnight.nightweb.core.service.PermissionService;
 import dev.teamnight.nightweb.core.service.ServiceManager;
@@ -126,4 +127,18 @@ public interface NightWebCore {
 	 * @return
 	 */
 	public boolean isDebugModeEnabled();
+	
+	/**
+	 * Gets the module data of the module of the specified identifier
+	 * @param identifier
+	 * @return
+	 */
+	public ModuleData getModuleData(String identifier);
+	
+	/**
+	 * Gets the module data of the specified module
+	 * @param module
+	 * @return
+	 */
+	public ModuleData getModuleData(NightModule module);
 }

@@ -21,7 +21,7 @@ public class GroupService extends AbstractService<Group> {
 	}
 	
 	public Group getByName(String name) {
-		Session session = this.getSessionFactory().openSession();
+		Session session = this.factory().openSession();
 		session.beginTransaction();
 		
 		Query<Group> query = session.createQuery("FROM " + this.getType().getCanonicalName() + " G WHERE G.name = :name", this.getType());
@@ -29,12 +29,13 @@ public class GroupService extends AbstractService<Group> {
 		
 		Group group = query.uniqueResult();
 		session.getTransaction().commit();
+		session.close();
 		
 		return group;
 	}
 	
 	public List<Group> getStaffGroups() {
-		Session session = this.getSessionFactory().openSession();
+		Session session = this.factory().openSession();
 		session.beginTransaction();
 		
 		Query<Group> query = session.createQuery("FROM " + this.getType().getCanonicalName() + " G WHERE staffGroup = true", this.getType());
@@ -42,6 +43,7 @@ public class GroupService extends AbstractService<Group> {
 		List<Group> groups = query.getResultList();
 		
 		session.getTransaction().commit();
+		session.close();
 		
 		return groups;
 	}

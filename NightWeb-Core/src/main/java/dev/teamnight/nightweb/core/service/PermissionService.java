@@ -20,7 +20,7 @@ public class PermissionService extends AbstractService<Permission> {
 	}
 	
 	public Permission getByName(String name) {
-		Session session = this.getSessionFactory().openSession();
+		Session session = this.factory().openSession();
 		session.beginTransaction();
 		
 		Query<Permission> query = session.createQuery("FROM " + this.getType().getCanonicalName() + " P WHERE P.name = :name", this.getType());
@@ -28,18 +28,27 @@ public class PermissionService extends AbstractService<Permission> {
 		
 		Permission perm = query.uniqueResult();
 		session.getTransaction().commit();
+		session.close();
 		
 		return perm;
 	}
 	
 	public void saveIfNotExists(Permission permission) {
-		Session session = this.getSessionFactory().openSession();
+		Session session = this.factory().openSession();
 		session.beginTransaction();
+		
+		if(this.getByName(permission.getName()) != null) {
+			return;
+		}
 		
 		try {
 			session.save(permission);
 			session.getTransaction().commit();
-		} catch(ConstraintViolationException e) {
+		} catch(Exception e) {
+			session.getTransaction().rollback();
+			throw e;
+		} finally {
+			session.close();
 		}
 	}
 }

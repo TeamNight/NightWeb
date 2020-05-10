@@ -14,11 +14,29 @@ import javax.persistence.UniqueConstraint;
  *
  */
 @Entity
-@Table(name = "user_settings", uniqueConstraints = @UniqueConstraint(columnNames = {"name", "user"}))
+@Table(name = "user_settings", uniqueConstraints = @UniqueConstraint(columnNames = {"settingKey", "user"}))
 public class UserSetting extends Setting {
 
 	@ManyToOne
 	@Column(nullable = false)
 	private User user;
+	
+	public UserSetting(Setting baseSetting) {
+		super(baseSetting);
+	}
+	
+	/**
+	 * @return the user
+	 */
+	public User getUser() {
+		return user;
+	}
+	
+	/**
+	 * @param user the user to set
+	 */
+	public void setUser(User user) {
+		this.user = user;
+	}
 	
 }

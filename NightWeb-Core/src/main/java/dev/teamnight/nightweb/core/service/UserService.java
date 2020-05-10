@@ -2,7 +2,6 @@ package dev.teamnight.nightweb.core.service;
 
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.query.Query;
 
 import dev.teamnight.nightweb.core.entities.User;
@@ -21,7 +20,7 @@ public class UserService extends AbstractService<User> {
 	}
 	
 	public <T extends User> T getByUsername(String username, Class<T> type) {
-		Session session = this.getSessionFactory().openSession();
+		Session session = this.factory().openSession();
 		session.beginTransaction();
 		
 		Query<T> query = session.createQuery("FROM " + type.getCanonicalName() + " U WHERE U.username = :username", type);
@@ -29,6 +28,7 @@ public class UserService extends AbstractService<User> {
 		
 		T user = query.uniqueResult();
 		session.getTransaction().commit();
+		session.close();
 		
 		return user;
 	}
@@ -38,7 +38,7 @@ public class UserService extends AbstractService<User> {
 	}
 
 	public <T extends User> T getByEmail(String email, Class<T> type) {
-		Session session = this.getSessionFactory().openSession();
+		Session session = this.factory().openSession();
 		session.beginTransaction();
 		
 		Query<T> query = session.createQuery("FROM " + type.getCanonicalName() + " U WHERE U.email = :email", type);
@@ -46,16 +46,8 @@ public class UserService extends AbstractService<User> {
 		
 		T user = query.uniqueResult();
 		session.getTransaction().commit();
+		session.close();
 		
 		return user;
-	}
-	
-	@Override
-	public void save(User value) {
-		try {
-			super.save(value);
-		} catch(ConstraintViolationException e) {
-			
-		}
 	}
 }

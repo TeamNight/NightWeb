@@ -4,10 +4,12 @@
 package dev.teamnight.nightweb.core.module;
 
 import dev.teamnight.nightweb.core.NightModule;
+import dev.teamnight.nightweb.core.entities.ModuleData;
 
 public class ModuleHolder {
 
 	private NightModule module;
+	private ModuleData data;
 	private ModuleMetaFile metaFile;
 	
 	/**
@@ -15,6 +17,13 @@ public class ModuleHolder {
 	 */
 	public NightModule getModule() {
 		return module;
+	}
+	
+	/**
+	 * @return the data
+	 */
+	public ModuleData getData() {
+		return data;
 	}
 	
 	/**
@@ -29,6 +38,13 @@ public class ModuleHolder {
 	 */
 	void setModule(NightModule module) {
 		this.module = module;
+	}
+	
+	/**
+	 * @param data the data to set
+	 */
+	public void setData(ModuleData data) {
+		this.data = data;
 	}
 	
 	/**

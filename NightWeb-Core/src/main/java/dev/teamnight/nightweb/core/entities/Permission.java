@@ -5,10 +5,13 @@ package dev.teamnight.nightweb.core.entities;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 
@@ -30,29 +33,33 @@ public class Permission {
 	@Column(nullable = false)
 	private String value;
 	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "moduleId", nullable = false)
+	private ModuleData module;
+	
 	protected Permission() {}
 	
-	public Permission(String name, short value) {
-		this(name, Type.NUMBER, String.valueOf(value));
+	public Permission(String name, short value, ModuleData data) {
+		this(name, Type.NUMBER, String.valueOf(value), data);
 	}
 	
-	public Permission(String name, int value) {
-		this(name, Type.NUMBER, String.valueOf(value));
+	public Permission(String name, int value, ModuleData data) {
+		this(name, Type.NUMBER, String.valueOf(value), data);
 	}
 	
-	public Permission(String name, long value) {
-		this(name, Type.NUMBER, String.valueOf(value));
+	public Permission(String name, long value, ModuleData data) {
+		this(name, Type.NUMBER, String.valueOf(value), data);
 	}
 	
-	public Permission(String name, double value) {
-		this(name, Type.NUMBER, String.valueOf(value));
+	public Permission(String name, double value, ModuleData data) {
+		this(name, Type.NUMBER, String.valueOf(value), data);
 	}
 	
-	public Permission(String name, Tribool value) {
-		this(name, Type.FLAG, value.getAsString());
+	public Permission(String name, Tribool value, ModuleData data) {
+		this(name, Type.FLAG, value.getAsString(), data);
 	}
 	
-	public Permission(String name, Permission.Type type, String value) {
+	public Permission(String name, Permission.Type type, String value, ModuleData data) {
 		this.name = name;
 		this.type = type;
 		this.value = value;
@@ -113,6 +120,13 @@ public class Permission {
 			return false;
 		}
 	}
+	
+	/**
+	 * @return the module
+	 */
+	public ModuleData getModule() {
+		return module;
+	}
 
 	/**
 	 * @param name the name to set
@@ -133,6 +147,13 @@ public class Permission {
 	 */
 	public void setValue(String value) {
 		this.value = value;
+	}
+	
+	/**
+	 * @param module the module to set
+	 */
+	public void setModule(ModuleData module) {
+		this.module = module;
 	}
 
 	/**

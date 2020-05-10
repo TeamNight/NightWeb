@@ -19,7 +19,7 @@ module dev.teamnight.nightweb.core {
 	requires java.xml.bind;
 	requires transitive javax.servlet.api;
 	requires org.eclipse.jetty.server;
-	requires org.eclipse.jetty.servlet;
+	requires transitive org.eclipse.jetty.servlet;
 	requires org.eclipse.jetty.util;
 	requires transitive log4j.api;
 	requires log4j.core;
@@ -30,4 +30,6 @@ module dev.teamnight.nightweb.core {
 	requires transitive mysql.connector.java;
 	requires com.google.common;
 	requires commons.validator;
+	requires owasp.java.html.sanitizer;
+	requires java.sql;
 }

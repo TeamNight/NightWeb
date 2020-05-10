@@ -35,7 +35,7 @@ public class JettyApplicationContext implements ApplicationContext {
 	private final ServletContextHandler handler;
 	private final SessionFactory factory;
 	private final ServiceManager serviceManager;
-	private final TemplateManager templateManager;
+	private final TemplateManager templateManager; //TODO maybe change this two to NightWebCore in order to be available all the time
 	private Application application;
 
 	private Class<? extends WebSession> sessionType;

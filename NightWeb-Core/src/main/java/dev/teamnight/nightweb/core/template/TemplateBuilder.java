@@ -9,6 +9,8 @@ import java.util.HashMap;
 
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.logging.log4j.LogManager;
+
 import dev.teamnight.nightweb.core.exceptions.TemplateProcessException;
 import dev.teamnight.nightweb.core.template.AlertMessage.Type;
 import freemarker.core.ParseException;
@@ -86,6 +88,8 @@ public class TemplateBuilder {
 		if(this.temp != null) {
 			Template temp = this.getTemplate();
 			StringWriter out = new StringWriter();
+			
+			this.replacements.forEach((key, replacement) -> LogManager.getLogger().debug(key + ":" + replacement));
 			
 			try {
 				temp.process(this.replacements, out);

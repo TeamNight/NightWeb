@@ -9,6 +9,7 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -27,18 +28,22 @@ import org.hibernate.cfg.Configuration;
 
 import dev.teamnight.nightweb.core.Application;
 import dev.teamnight.nightweb.core.ApplicationContext;
+import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.Server;
 import dev.teamnight.nightweb.core.WebSession;
+import dev.teamnight.nightweb.core.entities.ActivationType;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
 import dev.teamnight.nightweb.core.entities.Group;
 import dev.teamnight.nightweb.core.entities.GroupPermission;
 import dev.teamnight.nightweb.core.entities.ModuleData;
 import dev.teamnight.nightweb.core.entities.Permission;
+import dev.teamnight.nightweb.core.entities.Setting;
 import dev.teamnight.nightweb.core.entities.User;
 import dev.teamnight.nightweb.core.entities.UserPermission;
 import dev.teamnight.nightweb.core.entities.XmlConfiguration;
+import dev.teamnight.nightweb.core.entities.Setting.Type;
 import dev.teamnight.nightweb.core.module.JavaModuleLoader;
 import dev.teamnight.nightweb.core.module.ModuleManager;
 import dev.teamnight.nightweb.core.module.ModuleManagerImpl;
@@ -49,11 +54,16 @@ import dev.teamnight.nightweb.core.service.ModuleService;
 import dev.teamnight.nightweb.core.service.PermissionService;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 import dev.teamnight.nightweb.core.service.ServiceManagerImpl;
+import dev.teamnight.nightweb.core.service.SettingService;
 import dev.teamnight.nightweb.core.service.UserService;
+import dev.teamnight.nightweb.core.servlets.ActivationServlet;
+import dev.teamnight.nightweb.core.servlets.LoginServlet;
+import dev.teamnight.nightweb.core.servlets.LogoutServlet;
 import dev.teamnight.nightweb.core.servlets.RegistrationServlet;
 import dev.teamnight.nightweb.core.servlets.TestServlet;
 import dev.teamnight.nightweb.core.template.TemplateManager;
 import dev.teamnight.nightweb.core.template.TemplateManagerImpl;
+import freemarker.template.TemplateModelException;
 
 public class NightWebCoreImpl extends Application implements NightWebCore {
 	
@@ -77,10 +87,13 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	private List<WebSession> sessions = new ArrayList<WebSession>();
 	
 	public NightWebCoreImpl() {
+		//Initializing some things
+		long start = System.currentTimeMillis();
 		NightWeb.setCoreApplication(this);
 		//TODO Implement public static main(NightWeb) by using modules from /modules or /libraries
 		NightWebCoreImpl.LOGGER = LogManager.getLogger(getClass());
 		
+		//Needed paths for startup
 		Path workingDir = NightWeb.WORKING_DIR;
 		Path configPath = workingDir.resolve("config.xml");
 		Path hibernateConfigPath = workingDir.resolve("hibernate.cfg.xml");
@@ -95,6 +108,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 			return;
 		}
 		
+		//Create default configuration file if not exists
 		if(!Files.exists(configPath, LinkOption.NOFOLLOW_LINKS)) {
 			LOGGER.info("Configuration is not existing, creating one...");
 			XmlConfiguration defaultConfig = new XmlConfiguration();
@@ -120,6 +134,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 			}
 		}
 		
+		//Read config file
 		try {
 			Unmarshaller unmarshaller = configContext.createUnmarshaller();
 			this.config = (XmlConfiguration) unmarshaller.unmarshal(configPath.toAbsolutePath().toFile());
@@ -131,6 +146,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 			return;
 		}
 		
+		//Set loggers to debug if debug is enabled
 		if(this.config.isDebug()) {
 			LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
 			org.apache.logging.log4j.core.config.Configuration config = ctx.getConfiguration();
@@ -140,6 +156,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 			LOGGER.debug(">>>>> Enabled debug messages for all loggers <<<<<");
 		}
 		
+		//Check for hibernate config and copy it if it not exists
 		if(!Files.exists(hibernateConfigPath, LinkOption.NOFOLLOW_LINKS)) {
 			LOGGER.info("Database configuration does not exist, creating one...");
 			try {
@@ -161,18 +178,22 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		this.createIfNotExists(NightWeb.TEMPLATES_DIR);
 		this.createIfNotExists(NightWeb.LANG_DIR);
 		
+		//Jetty Server
 		this.server = new JettyServer(this, this.config);
 		
+		//Add core entities
 		Configuration hibernateConf = new Configuration()
 				.configure(hibernateConfigPath.toFile())
 				.addAnnotatedClass(ModuleData.class)
 				.addAnnotatedClass(ApplicationData.class)
+				.addAnnotatedClass(Setting.class)
 				.addAnnotatedClass(Permission.class)
 				.addAnnotatedClass(UserPermission.class)
 				.addAnnotatedClass(GroupPermission.class)
 				.addAnnotatedClass(User.class)
 				.addAnnotatedClass(Group.class);
 		
+		//Startup ModuleManager
 		LOGGER.debug("Setting up ModuleManagerImpl");
 		this.moduleManager = new ModuleManagerImpl(this);
 		this.moduleManager.registerLoader(JavaModuleLoader.class);
@@ -207,22 +228,28 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 			classList.forEach(clazz -> hibernateConf.addAnnotatedClass(clazz));
 		});
 		
+		//Load modules from /modules dir
+		//Module classes will be initialized but not called yet
 		LOGGER.info("Loading modules...");
 		this.moduleManager.loadModules(NightWeb.MODULES_DIR);
 		
+		//Build the sessionFactory before modules get enabled
 		this.sessionFactory = hibernateConf.buildSessionFactory();
 		this.server.setSessionFactory(this.sessionFactory);
 		LOGGER.debug("Built SessionFactory: " + this.sessionFactory.getClass().getCanonicalName());
 		
-		LOGGER.info("Setting up services...");
+		//Register all important services
+		LOGGER.info("Setting up core services...");
 		this.serviceMan = new ServiceManagerImpl(this.sessionFactory);
 		this.serviceMan.register(ApplicationService.class);
 		this.serviceMan.register(ModuleService.class);
+		this.serviceMan.register(SettingService.class);
 		this.serviceMan.register(UserService.class);
+		this.serviceMan.register(GroupService.class);
+		this.serviceMan.register(PermissionService.class);
 		this.serviceMan.register(ErrorLogService.class);
 		
-		this.templateManager = new TemplateManagerImpl(NightWeb.TEMPLATES_DIR, NightWeb.LANG_DIR);
-		
+		//Retrieve the application data for the core application which is needed for default settings
 		LOGGER.info("Enabling core application...");
 		ApplicationService appService = this.serviceMan.getService(ApplicationService.class);
 		ApplicationData data = appService.getByIdentifier("dev.teamnight.nightweb.core");
@@ -237,6 +264,17 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 			
 			appService.save(data);
 		}
+		
+		LOGGER.info("Creating default settings if not already existing...");
+		this.createDefaultSettings(data.getModuleData());
+		
+		this.templateManager = new TemplateManagerImpl(NightWeb.TEMPLATES_DIR, NightWeb.LANG_DIR);
+		try {
+			this.templateManager.setSharedVariable("defaultLanguage", this.serviceMan.getService(SettingService.class).getByKey("defaultLanguage").getValue());
+		} catch (TemplateModelException e) {
+			e.printStackTrace();
+		}
+		
 		this.setIdentifier("dev.teamnight.nightweb.core");
 		ApplicationContext coreContext = this.server.getContext(this);
 		this.init(coreContext);
@@ -244,10 +282,28 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		LOGGER.info("Enabling modules...");
 		this.moduleManager.enableModules();
 		
+		LOGGER.info("Loaded up in " + TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - start) + "s");
+		
 		LOGGER.info("Starting server");
 		this.server.start();
 	}
 	
+	/**
+	 * 
+	 */
+	private void createDefaultSettings(ModuleData data) {
+		LOGGER.debug("ModuleData of core: " + data.getIdentifier());
+		
+		Setting defaultLang = new Setting("defaultLanguage", "en", Type.STRING, data);
+		Setting dG = new Setting("defaultGroup", "-1", Type.NUMBER, data);
+		Setting gG = new Setting("guestGroup", "-1", Type.NUMBER, data);
+		Setting regEnabled = new Setting("registrationEnabled", Boolean.TRUE.toString(), Type.FLAG, data);
+		Setting loginEnabled = new Setting("loginEnabled", Boolean.TRUE.toString(), Type.FLAG, data);
+		Setting activationType = new Setting("activationType", ActivationType.ACTIVATION.toString(), Type.STRING, data);
+		
+		this.serviceMan.getService(SettingService.class).create(defaultLang, dG, gG, regEnabled, loginEnabled, activationType);
+	}
+
 	/**
 	 * @param directory
 	 */
@@ -262,6 +318,35 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 			}
 		}
 	}
+	
+	// ----------------------------------------------------------------------- //
+	// Application                                                             //
+	// ----------------------------------------------------------------------- //
+
+	@Override
+	public void configure(List<Class<?>> entityList) {
+		//Ignore this, all core classes are getting loaded at startup in the constructor
+	}
+
+	@Override
+	public void start(ApplicationContext ctx) {
+		ServletHolder staticHolder = new ServletHolder("static", DefaultServlet.class);
+		staticHolder.setInitParameter("resourceBase", NightWeb.STATIC_DIR.toAbsolutePath().toString());
+		staticHolder.setInitParameter("dirAllowed", "false");
+		staticHolder.setInitParameter("pathInfoOnly", "true");
+		
+		ctx.registerServletHolder(staticHolder, "/static/*");
+		
+		ctx.registerServlet(TestServlet.class, "/");
+		ctx.registerServlet(RegistrationServlet.class, "/register");
+		ctx.registerServlet(ActivationServlet.class, "/activation/*");
+		ctx.registerServlet(LoginServlet.class, "/login");
+		ctx.registerServlet(LogoutServlet.class, "/logout");
+	}
+	
+	// ----------------------------------------------------------------------- //
+	// NightWebCore                                                            //
+	// ----------------------------------------------------------------------- //
 
 	@Override
 	public String getImplementationName() {
@@ -280,7 +365,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 
 	@Override
 	public String getDomain() {
-		return null;
+		return "NightWeb";
 	}
 
 	@Override
@@ -361,21 +446,13 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	}
 
 	@Override
-	public void configure(List<Class<?>> entityList) {
-		//Ignore this, all core classes are getting loaded at startup in the constructor
+	public ModuleData getModuleData(String identifier) {
+		return this.moduleManager.getData(identifier);
 	}
 
 	@Override
-	public void start(ApplicationContext ctx) {
-		ServletHolder staticHolder = new ServletHolder("static", DefaultServlet.class);
-		staticHolder.setInitParameter("resourceBase", NightWeb.STATIC_DIR.toAbsolutePath().toString());
-		staticHolder.setInitParameter("dirAllowed", "false");
-		staticHolder.setInitParameter("pathInfoOnly", "true");
-		
-		ctx.registerServletHolder(staticHolder, "/static/*");
-		
-		ctx.registerServlet(TestServlet.class, "/");
-		ctx.registerServlet(RegistrationServlet.class, "/register");
+	public ModuleData getModuleData(NightModule module) {
+		return this.moduleManager.getData(module.getIdentifier());
 	}
 
 }

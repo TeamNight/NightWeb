@@ -35,10 +35,10 @@ public class Group implements Comparable<Group>, PermissionOwner<GroupPermission
 	private String name;
 	
 	@Column
-	private int priority;
+	private int priority = 0;
 	
 	@Column
-	private boolean staffGroup;
+	private boolean staffGroup = false;
 	
 	@Column
 	private String bannerStyleClass;

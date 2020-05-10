@@ -6,9 +6,12 @@ package dev.teamnight.nightweb.core.entities;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 
@@ -17,15 +20,15 @@ import javax.persistence.UniqueConstraint;
  *
  */
 @Entity
-@Table(name = "settings", uniqueConstraints = @UniqueConstraint(columnNames = {"key"}))
+@Table(name = "settings", uniqueConstraints = @UniqueConstraint(columnNames = {"settingKey"}))
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 public class Setting {
 
 	@Id
-	@GeneratedValue
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private long id;
 	
-	@Column(nullable = false)
+	@Column(name = "settingKey", nullable = false)
 	private String key;
 	
 	@Column
@@ -36,6 +39,38 @@ public class Setting {
 	
 	@Column(nullable = false)
 	private Setting.Type type;	
+	
+	@Column
+	private String category;
+	
+	@ManyToOne
+	@JoinColumn(name = "moduleId", nullable = false)
+	private ModuleData module;
+	
+	public Setting() {}
+	
+	/**
+	 * Constructor for a new setting, defaultValue will be the same as value
+	 * @param key
+	 * @param value
+	 * @param type
+	 */
+	public Setting(String key, String value, Setting.Type type, ModuleData module) {
+		this.key = key;
+		this.value = value;
+		this.defaultValue = value;
+		this.type = type;
+		this.module = module;
+	}
+	
+	/**
+	 * Copy constructor
+	 * @param setting
+	 */
+	protected Setting(Setting setting) {
+		this(setting.key, setting.value, setting.type, setting.module);
+		this.defaultValue = setting.defaultValue;
+	}
 	
 	/**
 	 * @return the id
@@ -92,6 +127,17 @@ public class Setting {
 		}
 		throw new IllegalStateException("This is not a numeric setting.");
 	}
+	
+	public <E extends Enum<E>> Enum<E> getAsEnum(Class<E> enumType) {
+		return Enum.valueOf(enumType, this.value);
+	}
+	
+	/**
+	 * @return the defaultValue
+	 */
+	public String getDefaultValue() {
+		return defaultValue;
+	}
 
 	/**
 	 * @return the type
@@ -119,6 +165,13 @@ public class Setting {
 	 */
 	public void setValue(String value) {
 		this.value = value;
+	}
+	
+	/**
+	 * @param defaultValue the defaultValue to set
+	 */
+	public void setDefaultValue(String defaultValue) {
+		this.defaultValue = defaultValue;
 	}
 
 	/**

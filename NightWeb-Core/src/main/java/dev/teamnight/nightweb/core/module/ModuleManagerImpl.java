@@ -218,6 +218,9 @@ public class ModuleManagerImpl implements ModuleManager {
 			//TODO add boolean in order to check if module was actually enabled
 		}
 		
+		//Add data to holder
+		holder.setData(data);
+		
 		if(!data.isEnabled()) {
 			LOGGER.warn("Could not enable module " + holder.getMetaFile().getModuleIdentifier() + ". Module is not enabled in DB.");
 			return false;
@@ -401,6 +404,15 @@ public class ModuleManagerImpl implements ModuleManager {
 		
 		service.save(data);
 		LOGGER.info("Installed module >> " + data.getIdentifier());
+	}
+	
+	@Override
+	public ModuleData getData(String identifier) {
+		return this.loadedModules.stream()
+				.filter(holder -> holder.getMetaFile().getModuleIdentifier().equalsIgnoreCase(identifier))
+				.map(holder -> holder.getData())
+				.findFirst()
+				.orElse(null);
 	}
 
 }

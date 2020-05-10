@@ -3,8 +3,6 @@
  */
 package dev.teamnight.nightweb.core;
 
-import java.util.ArrayList;
-import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSessionBindingEvent;
@@ -12,10 +10,8 @@ import javax.servlet.http.HttpSessionBindingListener;
 
 import org.apache.logging.log4j.LogManager;
 
-import dev.teamnight.nightweb.core.entities.GroupPermission;
 import dev.teamnight.nightweb.core.entities.Permission;
 import dev.teamnight.nightweb.core.entities.User;
-import dev.teamnight.nightweb.core.entities.UserPermission;
 
 /**
  * @author Jonas
@@ -23,6 +19,8 @@ import dev.teamnight.nightweb.core.entities.UserPermission;
  */
 public class WebSession implements HttpSessionBindingListener {
 
+	//TODO implement update process during handling
+	
 	private Context context;
 	private User user;
 	
@@ -106,6 +104,13 @@ public class WebSession implements HttpSessionBindingListener {
 		}
 		
 		return this.user.hasPermission(permission);
+	}
+	
+	/**
+	 * Removes variables associated to a logged-in user, override this for your specific session and call super.flush();
+	 */
+	public void flush() {
+		this.user = null;
 	}
 	
 }

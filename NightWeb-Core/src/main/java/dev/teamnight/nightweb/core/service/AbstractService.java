@@ -44,6 +44,7 @@ public abstract class AbstractService<T> implements Service<T> {
 		session.beginTransaction();
 		T entity = session.get(this.type, key);
 		session.getTransaction().commit();
+		session.close();
 		
 		return entity;
 	}
@@ -58,6 +59,7 @@ public abstract class AbstractService<T> implements Service<T> {
 		session.beginTransaction();
 		List<T> entityList = session.createQuery(criteria).getResultList();
 		session.getTransaction().commit();
+		session.close();
 		
 		return entityList;
 	}
@@ -82,6 +84,7 @@ public abstract class AbstractService<T> implements Service<T> {
 				.getResultList();
 		
 		session.getTransaction().commit();
+		session.close();
 		
 		return entityList;
 	}
@@ -109,6 +112,7 @@ public abstract class AbstractService<T> implements Service<T> {
 				.getResultList();
 		
 		session.getTransaction().commit();
+		session.close();
 		
 		return entityList;
 	}
@@ -117,9 +121,19 @@ public abstract class AbstractService<T> implements Service<T> {
 	public Serializable create(T value) {
 		Session session = factory.openSession();
 		
-		session.beginTransaction();
-		Serializable id = session.save(value);
-		session.getTransaction().commit();
+		Serializable id = null;
+		try {
+			session.beginTransaction();
+			id = session.save(value);
+			session.getTransaction().commit();
+		} catch(Exception e) {
+			if(session.getTransaction() != null) {
+				session.getTransaction().rollback();
+				throw e;
+			}
+		} finally {
+			session.close();
+		}
 		
 		return id;
 	}
@@ -128,28 +142,55 @@ public abstract class AbstractService<T> implements Service<T> {
 	public void save(T value) {
 		Session session = factory.openSession();
 		
-		session.beginTransaction();
-		session.saveOrUpdate(value);
-		session.getTransaction().commit();
+		try {
+			session.beginTransaction();
+			session.saveOrUpdate(value);
+			session.getTransaction().commit();
+		} catch(Exception e) {
+			if(session.getTransaction() != null) {
+				session.getTransaction().rollback();
+				throw e;
+			}
+		} finally {
+			session.close();
+		}
 	}
 	
 	@Override
 	public void delete(Serializable key) {
 		Session session = factory.openSession();
 		
-		session.beginTransaction();
-		T entity = session.load(this.type, key);
-		session.delete(entity);
-		session.getTransaction().commit();
+		try {
+			session.beginTransaction();
+			T entity = session.load(this.type, key);
+			session.delete(entity);
+			session.getTransaction().commit();
+		} catch(Exception e) {
+			if(session.getTransaction() != null) {
+				session.getTransaction().rollback();
+				throw e;
+			}
+		} finally {
+			session.close();
+		}
 	}
 	
 	@Override
 	public void delete(T value) {
 		Session session = factory.openSession();
 		
-		session.beginTransaction();
-		session.delete(value);
-		session.getTransaction().commit();
+		try {
+			session.beginTransaction();
+			session.delete(value);
+			session.getTransaction().commit();
+		} catch(Exception e) {
+			if(session.getTransaction() != null) {
+				session.getTransaction().rollback();
+				throw e;
+			}
+		} finally {
+			session.close();
+		}
 	}
 	
 	@Override
@@ -163,6 +204,7 @@ public abstract class AbstractService<T> implements Service<T> {
 		session.beginTransaction();
 		Long count = session.createQuery(criteria).getSingleResult();
 		session.getTransaction().commit();
+		session.close();
 		
 		return count;
 	}
@@ -178,11 +220,12 @@ public abstract class AbstractService<T> implements Service<T> {
 				.getSingleResult();
 		
 		session.getTransaction().commit();
+		session.close();
 		
 		return count;
 	}
 	
-	protected SessionFactory getSessionFactory() {
+	protected SessionFactory factory() {
 		return this.factory;
 	}
 }

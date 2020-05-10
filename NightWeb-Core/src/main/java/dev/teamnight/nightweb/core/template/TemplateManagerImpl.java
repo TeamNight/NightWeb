@@ -51,6 +51,7 @@ public class TemplateManagerImpl implements TemplateManager {
 			this.languageManager = null;
 			e.printStackTrace();
 		}
+		
 		this.configuration = new Configuration(Configuration.VERSION_2_3_30);
 		try {
 			this.configuration.setDirectoryForTemplateLoading(templateDir.toAbsolutePath().toFile());

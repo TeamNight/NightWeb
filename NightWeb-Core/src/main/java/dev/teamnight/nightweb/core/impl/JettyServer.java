@@ -213,6 +213,7 @@ public class JettyServer implements Server {
 		handler.setInitParameter("org.eclipse.jetty.servlet.SessionCookie", app.getIdentifier() + ".session");
 		handler.setInitParameter("org.eclipse.jetty.servlet.SessionIdPathParameterName", "none");
 		handler.setContextPath(data.getContextPath());
+		handler.setErrorHandler(this.server.getErrorHandler());
 		
 		ApplicationContext ctx = new JettyApplicationContext(handler, this.sessionFactory, this.core.getServiceManager(), this.core.getTemplateManager());
 		ctx.setModule(app);

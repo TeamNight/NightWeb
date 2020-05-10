@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 import javax.persistence.CascadeType;
@@ -86,6 +87,12 @@ public class User implements PermissionOwner<UserPermission> {
 	
 	protected User() {}
 	
+	/**
+	 * Constructor for the creation of a user
+	 * Sets username, email, registrationDate to current time, a new groups list, a new permissions list, disabled to true and the languageCode to English
+	 * @param username
+	 * @param email
+	 */
 	public User(String username, String email) {
 		this.username = username;
 		this.email = email;
@@ -400,6 +407,10 @@ public class User implements PermissionOwner<UserPermission> {
 	 * @return hashed password
 	 */
 	public String createHash(String password) {
+		if(this.salt == null || this.salt.isBlank()) {
+			this.generateSalt();
+		}
+		
 		MessageDigest digest;
 		try {
 			digest = MessageDigest.getInstance("SHA-256");
@@ -411,7 +422,7 @@ public class User implements PermissionOwner<UserPermission> {
 		}
 		return null;
 	}
-	
+
 	/**
 	 * Verifies the user by his password.
 	 * 
@@ -426,5 +437,18 @@ public class User implements PermissionOwner<UserPermission> {
 		}
 		
 		return false;
+	}
+	
+	
+	/**
+	 * Generates a salt for the user
+	 */
+	private void generateSalt() {
+		Random random = new Random();
+		this.salt = random.ints(48, 123) //Alphanumeric ASCII chars
+				.filter(i -> (i <= 57 || i >= 65) && (i <= 90 || i >= 97)) //Only alphanumeric, there are some symbols in between
+				.limit(32)
+				.collect(StringBuilder::new, StringBuilder::appendCodePoint,  StringBuilder::append)
+				.toString();
 	}
 }

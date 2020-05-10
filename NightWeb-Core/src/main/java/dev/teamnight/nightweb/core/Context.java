@@ -35,7 +35,7 @@ public interface Context {
 	 * @param servlet
 	 * @param pathInfo
 	 */
-	public void registerServlet(Class<? extends HttpServlet> servlet, String pathInfo);
+	public void registerServlet(Class<? extends HttpServlet> servlet, String pathSpec);
 	
 	/**
 	 * Returns the global Service Manager containing all registered services.

@@ -13,8 +13,13 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.validator.routines.EmailValidator;
 
 import dev.teamnight.nightweb.core.Context;
+import dev.teamnight.nightweb.core.StringUtil;
 import dev.teamnight.nightweb.core.WebSession;
+import dev.teamnight.nightweb.core.entities.Group;
+import dev.teamnight.nightweb.core.entities.Setting;
 import dev.teamnight.nightweb.core.entities.User;
+import dev.teamnight.nightweb.core.service.GroupService;
+import dev.teamnight.nightweb.core.service.SettingService;
 import dev.teamnight.nightweb.core.service.UserService;
 
 /**
@@ -37,7 +42,18 @@ public class RegistrationServlet extends HttpServlet {
 		}
 		
 		Context ctx = Context.get(req);
-		ctx.getTemplateManager().builder("register.tpl").assign("test", "test").send(resp);
+		
+		//Check if registration is enabled
+		SettingService setServ = ctx.getServiceManager().getService(SettingService.class);
+		Setting regEnabled = setServ.getByKey("registrationEnabled");
+		
+		if(!regEnabled.getAsBoolean()) {
+			ctx.getTemplate("register.tpl").assign("regDisabled", true).send(resp);
+			return;
+		}
+		
+		//Build the template
+		ctx.getTemplateManager().builder("register.tpl").send(resp);
 	}
 	
 	@Override
@@ -50,6 +66,15 @@ public class RegistrationServlet extends HttpServlet {
 		}
 		
 		Context ctx = Context.get(req);
+		
+		//Check if registration is enabled
+		SettingService setServ = ctx.getServiceManager().getService(SettingService.class);
+		Setting regEnabled = setServ.getByKey("registrationEnabled");
+		
+		if(!regEnabled.getAsBoolean()) {
+			ctx.getTemplate("register.tpl").assign("regDisabled", true).send(resp);
+			return;
+		}
 		
 		//Checking input parameters
 		String email = req.getParameter("email");
@@ -98,10 +123,22 @@ public class RegistrationServlet extends HttpServlet {
 			return;
 		}
 		
+		//Set user fields
 		User user = new User(username, email);
-		//TODO set all fields
-		//TODO implement default permissions for users
-		//TODO implement default groups for users using settings
+		user.setPassword(user.createHash(password));
+		user.setActivationKey(StringUtil.getRandomString(16));
+		
+		//Set default group
+		long groupId = ctx.getServiceManager().getService(SettingService.class).getByKey("defaultGroup").getAsLong();
+		
+		if(groupId > 0) {
+			Group group = ctx.getServiceManager().getService(GroupService.class).getOne(groupId);
+			user.getGroups().add(group);
+		}
+		
+		userService.create(user);
+		ctx.getTemplate("register.tpl").assign("regComplete", true).send(resp);
+		
 		//TODO send mail
 	}
 }
