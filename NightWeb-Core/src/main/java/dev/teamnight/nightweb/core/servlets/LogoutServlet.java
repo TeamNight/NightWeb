@@ -11,11 +11,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import dev.teamnight.nightweb.core.WebSession;
+import dev.teamnight.nightweb.core.annotations.Authenticated;
 
 /**
  * @author Jonas
  *
  */
+@Authenticated
 public class LogoutServlet extends HttpServlet {
 
 	/**

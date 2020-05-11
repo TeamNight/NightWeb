@@ -41,7 +41,7 @@ public class WebSession implements HttpSessionBindingListener {
 			return null;
 		}
 		
-		if(sessionObj.getClass().isAssignableFrom(expectedType)) {
+		if(expectedType.isAssignableFrom(sessionObj.getClass())) {
 			return expectedType.cast(sessionObj);
 		}
 		return null;
@@ -111,6 +111,17 @@ public class WebSession implements HttpSessionBindingListener {
 	 */
 	public void flush() {
 		this.user = null;
+	}
+
+	/**
+	 * @param ctx 
+	 * This method retrieves the data for all variables from the db and attaches them with the current session of Hibernate
+	 * Overwrite this method if you have own variables or if you are using a subclass of user
+	 */
+	public void update() {
+		if(this.user != null) {
+			this.user = this.context.getDatabaseSession().get(User.class, this.user.getId());
+		}
 	}
 	
 }

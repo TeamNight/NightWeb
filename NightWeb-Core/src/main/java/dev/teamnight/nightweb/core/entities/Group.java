@@ -18,6 +18,9 @@ import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
 import javax.persistence.Table;
 
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
+
 /**
  * @author Jonas
  *
@@ -45,16 +48,16 @@ public class Group implements Comparable<Group>, PermissionOwner<GroupPermission
 	@Column
 	private String bannerText;
 	
-	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "group")
+	@OneToMany(cascade = CascadeType.ALL, mappedBy = "group")
+	@Fetch(FetchMode.JOIN)
 	@OrderBy("name ASC")
-	private List<GroupPermission> permissions;
+	private List<GroupPermission> permissions = new ArrayList<GroupPermission>();
 	
 	protected Group() {}
 	
 	public Group(String name) {
 		this.name = name;
 		this.staffGroup = false;
-		this.permissions = new ArrayList<GroupPermission>();
 	}
 	
 	public boolean equals(Group other) {

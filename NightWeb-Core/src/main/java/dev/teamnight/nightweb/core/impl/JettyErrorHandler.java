@@ -12,6 +12,7 @@ import java.util.Date;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.http.HttpServletRequest;
 
+import org.eclipse.jetty.http.HttpStatus;
 import org.eclipse.jetty.server.handler.ErrorHandler;
 
 import dev.teamnight.nightweb.core.NightWeb;
@@ -41,8 +42,10 @@ public class JettyErrorHandler extends ErrorHandler {
 		
 		ErrorLogEntry entry = new ErrorLogEntry();
 		entry.setClassName(request.getRequestURI());
-		entry.setErrorName(th.getClass().getCanonicalName());
-		entry.setErrorMessage(th.getMessage());
+		entry.setErrorName(
+				th != null ? th.getClass().getCanonicalName() : String.valueOf(code)
+				);
+		entry.setErrorMessage(th != null ? th.getMessage() : HttpStatus.getMessage(code));
 		entry.setStackTrace(String.valueOf(request.getAttribute("stacktrace")));
 		entry.setTime(new Date());
 		

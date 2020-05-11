@@ -18,13 +18,14 @@ import java.util.stream.Collectors;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.JoinTable;
+import javax.persistence.NamedEntityGraph;
+import javax.persistence.NamedAttributeNode;
 import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
 import javax.persistence.Table;
@@ -41,6 +42,10 @@ import javax.persistence.JoinColumn;
 @Entity
 @Table(name = "users")
 @Inheritance(strategy = InheritanceType.JOINED)
+@NamedEntityGraph(name = "graph.User", attributeNodes = {
+		@NamedAttributeNode("groups"),
+		@NamedAttributeNode("permissions")
+})
 public class User implements PermissionOwner<UserPermission> {
 	
 	@Id
@@ -67,17 +72,17 @@ public class User implements PermissionOwner<UserPermission> {
 	@Column
 	private String recoveryKey;
 	
-	@OneToMany(fetch = FetchType.LAZY)
+	@OneToMany
 	@JoinTable(
 			name = "user_groups",
 			joinColumns = @JoinColumn(name = "groupId"),
 			inverseJoinColumns = @JoinColumn(name = "userId")
 			)
-	private List<Group> groups;
+	private List<Group> groups = new ArrayList<Group>();
 	
-	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "user")
+	@OneToMany(cascade = CascadeType.ALL, mappedBy = "user")
 	@OrderBy("name ASC")
-	private List<UserPermission> permissions;
+	private List<UserPermission> permissions = new ArrayList<UserPermission>();
 	
 	@Column(name = "language")
 	private String languageCode;
@@ -97,8 +102,6 @@ public class User implements PermissionOwner<UserPermission> {
 		this.username = username;
 		this.email = email;
 		this.registrationDate = new Date();
-		this.groups = new ArrayList<Group>();
-		this.permissions = new ArrayList<UserPermission>();
 		this.disabled = true;
 		this.languageCode = Locale.ENGLISH.toLanguageTag();
 	}

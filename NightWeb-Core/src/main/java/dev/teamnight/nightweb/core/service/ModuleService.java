@@ -25,7 +25,7 @@ public class ModuleService extends AbstractService<ModuleData> {
 	}
 	
 	public ModuleData getByIdentifier(String identifier) {
-		Session session = this.factory().openSession();
+		Session session = this.factory().getCurrentSession();
 		session.beginTransaction();
 		
 		Query<ModuleData> query = session.createQuery("FROM " + ModuleData.class.getSimpleName() + " A WHERE A.identifier = :identifier", ModuleData.class);
@@ -33,13 +33,12 @@ public class ModuleService extends AbstractService<ModuleData> {
 		
 		ModuleData data = query.uniqueResult();
 		session.getTransaction().commit();
-		session.close();
 		
 		return data;
 	}
 	
 	public List<ModuleData> getModulesByName(String name) {
-		Session session = this.factory().openSession();
+		Session session = this.factory().getCurrentSession();
 		session.beginTransaction();
 		
 		Query<ModuleData> query = session.createQuery("FROM " + ModuleData.class.getSimpleName() + " A WHERE A.name = :name", ModuleData.class);
@@ -47,7 +46,6 @@ public class ModuleService extends AbstractService<ModuleData> {
 		
 		List<ModuleData> dataList = query.getResultList();
 		session.getTransaction().commit();
-		session.close();
 		
 		return dataList;
 	}

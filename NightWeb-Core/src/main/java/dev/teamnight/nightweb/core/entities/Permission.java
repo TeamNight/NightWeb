@@ -63,6 +63,7 @@ public class Permission {
 		this.name = name;
 		this.type = type;
 		this.value = value;
+		this.module = data;
 	}
 	
 	/**

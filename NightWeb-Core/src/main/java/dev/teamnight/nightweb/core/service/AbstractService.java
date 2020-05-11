@@ -40,26 +40,25 @@ public abstract class AbstractService<T> implements Service<T> {
 	
 	@Override
 	public T getOne(Serializable key) {
-		Session session = factory.openSession();
+		Session session = factory.getCurrentSession();
 		session.beginTransaction();
+		
 		T entity = session.get(this.type, key);
 		session.getTransaction().commit();
-		session.close();
 		
 		return entity;
 	}
 	
 	@Override
 	public List<T> getAll() {
-		Session session = factory.openSession();
+		Session session = factory.getCurrentSession();
+		session.beginTransaction();
 		
 		CriteriaQuery<T> criteria = session.getCriteriaBuilder().createQuery(this.type);
 		criteria.from(this.type);
 		
-		session.beginTransaction();
 		List<T> entityList = session.createQuery(criteria).getResultList();
 		session.getTransaction().commit();
-		session.close();
 		
 		return entityList;
 	}
@@ -71,12 +70,12 @@ public abstract class AbstractService<T> implements Service<T> {
 	
 	@Override
 	public List<T> getMultiple(int offset, int limit) {
-		Session session = factory.openSession();
+		Session session = factory.getCurrentSession();
+		session.beginTransaction();
 		
 		CriteriaQuery<T> criteria = session.getCriteriaBuilder().createQuery(this.type);
 		criteria.from(this.type);
 		
-		session.beginTransaction();
 		List<T> entityList = session
 				.createQuery(criteria)
 				.setMaxResults(limit)
@@ -84,7 +83,6 @@ public abstract class AbstractService<T> implements Service<T> {
 				.getResultList();
 		
 		session.getTransaction().commit();
-		session.close();
 		
 		return entityList;
 	}
@@ -101,25 +99,24 @@ public abstract class AbstractService<T> implements Service<T> {
 	
 	@Override
 	public List<T> getMultiple(String whereClause, int offset, int limit) {
-		Session session = factory.openSession();
+		Session session = factory.getCurrentSession();
+		session.beginTransaction();
 		
 		Query<T> query = session.createQuery("FROM " + this.type.getSimpleName() + " WHERE " + whereClause, this.type);
-		
-		session.beginTransaction();
+
 		List<T> entityList = query
 				.setMaxResults(limit)
 				.setFirstResult(offset)
 				.getResultList();
 		
 		session.getTransaction().commit();
-		session.close();
 		
 		return entityList;
 	}
 	
 	@Override
 	public Serializable create(T value) {
-		Session session = factory.openSession();
+		Session session = factory.getCurrentSession();
 		
 		Serializable id = null;
 		try {
@@ -131,8 +128,6 @@ public abstract class AbstractService<T> implements Service<T> {
 				session.getTransaction().rollback();
 				throw e;
 			}
-		} finally {
-			session.close();
 		}
 		
 		return id;
@@ -140,7 +135,7 @@ public abstract class AbstractService<T> implements Service<T> {
 	
 	@Override
 	public void save(T value) {
-		Session session = factory.openSession();
+		Session session = factory.getCurrentSession();
 		
 		try {
 			session.beginTransaction();
@@ -151,14 +146,12 @@ public abstract class AbstractService<T> implements Service<T> {
 				session.getTransaction().rollback();
 				throw e;
 			}
-		} finally {
-			session.close();
 		}
 	}
 	
 	@Override
 	public void delete(Serializable key) {
-		Session session = factory.openSession();
+		Session session = factory.getCurrentSession();
 		
 		try {
 			session.beginTransaction();
@@ -170,14 +163,12 @@ public abstract class AbstractService<T> implements Service<T> {
 				session.getTransaction().rollback();
 				throw e;
 			}
-		} finally {
-			session.close();
 		}
 	}
 	
 	@Override
 	public void delete(T value) {
-		Session session = factory.openSession();
+		Session session = factory.getCurrentSession();
 		
 		try {
 			session.beginTransaction();
@@ -188,14 +179,12 @@ public abstract class AbstractService<T> implements Service<T> {
 				session.getTransaction().rollback();
 				throw e;
 			}
-		} finally {
-			session.close();
 		}
 	}
 	
 	@Override
 	public long count() {
-		Session session = factory.openSession();
+		Session session = factory.getCurrentSession();
 		
 		CriteriaQuery<Long> criteria = session.getCriteriaBuilder().createQuery(Long.class);
 		Root<T> root = criteria.from(this.type);
@@ -204,14 +193,13 @@ public abstract class AbstractService<T> implements Service<T> {
 		session.beginTransaction();
 		Long count = session.createQuery(criteria).getSingleResult();
 		session.getTransaction().commit();
-		session.close();
 		
 		return count;
 	}
 	
 	@Override
 	public long count(String whereClause) {
-		Session session = factory.openSession();
+		Session session = factory.getCurrentSession();
 		
 		Query<Long> query = session.createQuery("SELECT COUNT(*) FROM " + this.type.getSimpleName() + " WHERE " + whereClause, Long.class);
 		
@@ -220,9 +208,17 @@ public abstract class AbstractService<T> implements Service<T> {
 				.getSingleResult();
 		
 		session.getTransaction().commit();
-		session.close();
 		
 		return count;
+	}
+	
+	@Override
+	public void associateToSession(Session session, T entity) {
+		if(this.type.isAssignableFrom(entity.getClass())) {
+			entity = this.type.cast(session.merge(entity));
+		} else {
+			session.merge(entity);
+		}
 	}
 	
 	protected SessionFactory factory() {

@@ -20,17 +20,29 @@ import org.hibernate.SessionFactory;
 
 import dev.teamnight.nightweb.core.Application;
 import dev.teamnight.nightweb.core.ApplicationContext;
-import dev.teamnight.nightweb.core.Authenticated;
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightModule;
+import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.WebSession;
+import dev.teamnight.nightweb.core.annotations.AdminServlet;
+import dev.teamnight.nightweb.core.annotations.Authenticated;
+import dev.teamnight.nightweb.core.service.ApplicationService;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 import dev.teamnight.nightweb.core.template.TemplateBuilder;
 import dev.teamnight.nightweb.core.template.TemplateManager;
 
 public class JettyApplicationContext implements ApplicationContext {
 
-	private static FilterHolder authenticationFilter = new FilterHolder(new AuthenticationFilter());
+	private static FilterHolder authenticationFilter = new FilterHolder(
+			new AuthenticationFilter(
+					NightWeb.getServiceManager().getService(ApplicationService.class).getByIdentifier("dev.teamnight.nightweb.core")
+					)
+			);
+	private static FilterHolder adminAuthenticationFilter = new FilterHolder(
+			new AdminAuthenticationFilter(
+					NightWeb.getServiceManager().getService(ApplicationService.class).getByIdentifier("dev.teamnight.nightweb.core")
+					)
+			);
 	
 	private final ServletContextHandler handler;
 	private final SessionFactory factory;
@@ -76,6 +88,17 @@ public class JettyApplicationContext implements ApplicationContext {
 			}
 		}
 		
+		AdminServlet admin = servlet.getAnnotation(AdminServlet.class);
+		if(admin != null) {
+			if(webServlet != null) {
+				for(String url : webServlet.urlPatterns()) {
+					this.handler.addFilter(adminAuthenticationFilter, url, EnumSet.allOf(DispatcherType.class));
+				}
+			} else {
+				this.handler.addFilter(adminAuthenticationFilter, pathSpec, EnumSet.allOf(DispatcherType.class));
+			}
+		}
+		
 		this.registerServlet(new NightJettyServletHolder(servlet).setContext(ctx), pathSpec);
 	}
 	
@@ -85,6 +108,8 @@ public class JettyApplicationContext implements ApplicationContext {
 			if(annotation instanceof Authenticated) {
 				LogManager.getLogger().info("Adding auth to " + pathSpec + "." + servlet.getCanonicalName()  + ": " + (servlet.getAnnotation(Authenticated.class) != null));
 				this.handler.addFilter(authenticationFilter, pathSpec, EnumSet.allOf(DispatcherType.class));
+			} else if(annotation instanceof AdminServlet) {
+				this.handler.addFilter(adminAuthenticationFilter, pathSpec, EnumSet.allOf(DispatcherType.class));
 			}
 		}
 		
@@ -108,6 +133,13 @@ public class JettyApplicationContext implements ApplicationContext {
 			
 		}
 		
+		AdminServlet admin = servlet.getAnnotation(AdminServlet.class);
+		if(admin != null) {
+			for(String url : webServlet.urlPatterns()) {
+				this.handler.addFilter(adminAuthenticationFilter, url, EnumSet.allOf(DispatcherType.class));
+			}
+		}
+		
 		NightJettyServletHolder holder = new NightJettyServletHolder(servlet).setContext(this);
 		
 		for(String url : webServlet.urlPatterns()) {
@@ -122,6 +154,10 @@ public class JettyApplicationContext implements ApplicationContext {
 			LogManager.getLogger().info("Adding auth to " + pathSpec + "." + holder.getHeldClass().getCanonicalName()  + ": " + (holder.getHeldClass().getAnnotation(Authenticated.class) != null));
 			this.handler.addFilter(authenticationFilter, pathSpec, EnumSet.allOf(DispatcherType.class));
 		}
+		AdminServlet admin = holder.getClass().getAnnotation(AdminServlet.class);
+		if(admin != null) {
+			this.handler.addFilter(adminAuthenticationFilter, pathSpec, EnumSet.allOf(DispatcherType.class));
+		}
 		
 		this.registerServlet(holder, pathSpec);
 	}
@@ -132,7 +168,7 @@ public class JettyApplicationContext implements ApplicationContext {
 
 	@Override
 	public Session getDatabaseSession() {
-		return this.factory.openSession();
+		return this.factory.getCurrentSession();
 	}
 
 	@Override

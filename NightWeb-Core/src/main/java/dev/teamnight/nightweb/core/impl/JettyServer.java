@@ -100,7 +100,6 @@ public class JettyServer implements Server {
 		handlers.addHandler(this.servletContextHandlers);
 		
 		server.setHandler(handlers);
-		server.setErrorHandler(new JettyErrorHandler(NightWeb.getTemplateManager()));
 		server.setRequestLog(new CustomRequestLog(new Log4jRequestLogWriter(JettyServer.class), JettyServer.RequestLogFormat));
 	}
 	
@@ -113,6 +112,8 @@ public class JettyServer implements Server {
 		LOGGER.info("Starting with "
 				+ (this.servletContextHandlers.getHandlers() != null ? this.servletContextHandlers.getHandlers().length : 0)
 				+ " ContextHandlers");
+		
+		this.server.setErrorHandler(new JettyErrorHandler(NightWeb.getTemplateManager()));
 		
 		try {
 			this.server.start();

@@ -4,17 +4,14 @@
 package dev.teamnight.nightweb.core.service;
 
 import java.io.Serializable;
-import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.query.Query;
 
-import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.entities.Setting;
 
 /**
@@ -42,7 +39,7 @@ public class SettingService extends AbstractService<Setting> {
 			return this.loadedSettings.get(key);
 		}
 		
-		Session session = this.factory().openSession();
+		Session session = this.factory().getCurrentSession();
 		session.beginTransaction();
 		
 		Query<Setting> query = session.createQuery("FROM " + this.getType().getSimpleName() + " S WHERE S.key = :key", this.getType());
@@ -50,7 +47,6 @@ public class SettingService extends AbstractService<Setting> {
 		
 		Setting setting = query.uniqueResult();
 		session.getTransaction().commit();
-		session.close();
 		
 		return setting;
 	}

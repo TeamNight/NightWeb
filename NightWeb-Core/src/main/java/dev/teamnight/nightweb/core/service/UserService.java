@@ -2,7 +2,6 @@ package dev.teamnight.nightweb.core.service;
 
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.query.Query;
 
 import dev.teamnight.nightweb.core.entities.User;
 
@@ -16,37 +15,43 @@ public class UserService extends AbstractService<User> {
 	}
 	
 	public User getByUsername(String username) {
-		return this.getByUsername(username, User.class);
-	}
-	
-	public <T extends User> T getByUsername(String username, Class<T> type) {
-		Session session = this.factory().openSession();
+		Session session = this.factory().getCurrentSession();
 		session.beginTransaction();
 		
-		Query<T> query = session.createQuery("FROM " + type.getCanonicalName() + " U WHERE U.username = :username", type);
-		query.setParameter("username", username);
+		User user = session.createQuery("FROM " + this.getType().getCanonicalName() + " U "
+				+ "LEFT JOIN FETCH U.groups G "
+				+ "WHERE U.username = :username",  this.getType())
+				.setParameter("username", username)
+				.uniqueResult();
 		
-		T user = query.uniqueResult();
+		user = session.createQuery("FROM " + this.getType().getCanonicalName() + " U "
+				+ "LEFT JOIN FETCH U.permissions P "
+				+ "WHERE U in :user", this.getType())
+				.setParameter("user", user)
+				.uniqueResult();
+		
 		session.getTransaction().commit();
-		session.close();
 		
 		return user;
 	}
 
 	public User getByEmail(String email) {
-		return this.getByEmail(email, User.class);
-	}
-
-	public <T extends User> T getByEmail(String email, Class<T> type) {
-		Session session = this.factory().openSession();
+		Session session = this.factory().getCurrentSession();
 		session.beginTransaction();
 		
-		Query<T> query = session.createQuery("FROM " + type.getCanonicalName() + " U WHERE U.email = :email", type);
-		query.setParameter("email", email);
+		User user = session.createQuery("FROM " + this.getType().getCanonicalName() + " U "
+				+ "LEFT JOIN FETCH U.groups G "
+				+ "WHERE U.email = :email",  this.getType())
+				.setParameter("email", email)
+				.uniqueResult();
 		
-		T user = query.uniqueResult();
+		user = session.createQuery("FROM " + this.getType().getCanonicalName() + " U "
+				+ "LEFT JOIN FETCH U.permissions P "
+				+ "WHERE U in :user", this.getType())
+				.setParameter("user", user)
+				.uniqueResult();
+		
 		session.getTransaction().commit();
-		session.close();
 		
 		return user;
 	}

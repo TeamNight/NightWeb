@@ -17,6 +17,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import dev.teamnight.nightweb.core.AdminSession;
 import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
 
@@ -24,12 +25,12 @@ import dev.teamnight.nightweb.core.entities.ApplicationData;
  * @author Jonas
  *
  */
-public class AuthenticationFilter implements Filter {
+public class AdminAuthenticationFilter implements Filter {
 
 	private static final Logger LOGGER = LogManager.getLogger();
 	private ApplicationData data;
 	
-	public AuthenticationFilter(ApplicationData coreData) {
+	public AdminAuthenticationFilter(ApplicationData coreData) {
 		if(coreData == null) {
 			throw new IllegalArgumentException("coreData can not be null");
 		}
@@ -49,10 +50,10 @@ public class AuthenticationFilter implements Filter {
 			HttpServletRequest req = (HttpServletRequest) request;
 			HttpServletResponse resp = (HttpServletResponse) response;
 			
-			WebSession session = WebSession.getSession(req);
+			AdminSession session = WebSession.getSession(req, AdminSession.class);
 			
 			if(session == null || !session.isLoggedIn()) {
-				resp.sendRedirect(this.data.getContextPath() + "/login");
+				resp.sendRedirect(this.data.getContextPath() + "/admin/login");
 				return;
 			}
 			

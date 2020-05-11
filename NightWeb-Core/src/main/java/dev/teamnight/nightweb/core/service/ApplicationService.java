@@ -31,7 +31,7 @@ public class ApplicationService extends AbstractService<ApplicationData> {
 	 * @return ApplicationData or {@code null}
 	 */
 	public ApplicationData getByIdentifier(String identifier) {
-		Session session = this.factory().openSession();
+		Session session = this.factory().getCurrentSession();
 		session.beginTransaction();
 		
 		Query<ApplicationData> query = session.createQuery("FROM ApplicationData A WHERE A.identifier = :identifier", ApplicationData.class);
@@ -39,7 +39,6 @@ public class ApplicationService extends AbstractService<ApplicationData> {
 		
 		ApplicationData data = query.uniqueResult();
 		session.getTransaction().commit();
-		session.close();
 		
 		return data;
 	}
@@ -51,7 +50,7 @@ public class ApplicationService extends AbstractService<ApplicationData> {
 	 * @return {@link java.util.List} List of ApplicationDatas
 	 */
 	public List<ApplicationData> getModulesByName(String name) {
-		Session session = this.factory().openSession();
+		Session session = this.factory().getCurrentSession();
 		session.beginTransaction();
 		
 		Query<ApplicationData> query = session.createQuery("FROM ApplicationData A WHERE A.name = :name", ApplicationData.class);
@@ -59,7 +58,6 @@ public class ApplicationService extends AbstractService<ApplicationData> {
 		
 		List<ApplicationData> dataList = query.getResultList();
 		session.getTransaction().commit();
-		session.close();
 		
 		return dataList;
 	}

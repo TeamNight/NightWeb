@@ -71,6 +71,9 @@ public class NightJettyServletHolder extends ServletHolder {
 						| InvocationTargetException | NoSuchMethodException | SecurityException e) {
 					e.printStackTrace();
 				}
+			} else {
+				WebSession session = (WebSession) httpRequest.getSession().getAttribute("session");
+				session.update();
 			}
 		}
 		

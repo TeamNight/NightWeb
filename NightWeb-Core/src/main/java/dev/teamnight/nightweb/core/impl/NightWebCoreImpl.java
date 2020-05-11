@@ -33,12 +33,14 @@ import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.Server;
 import dev.teamnight.nightweb.core.WebSession;
+import dev.teamnight.nightweb.core.annotations.AdminServlet;
 import dev.teamnight.nightweb.core.entities.ActivationType;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
 import dev.teamnight.nightweb.core.entities.Group;
 import dev.teamnight.nightweb.core.entities.GroupPermission;
 import dev.teamnight.nightweb.core.entities.ModuleData;
 import dev.teamnight.nightweb.core.entities.Permission;
+import dev.teamnight.nightweb.core.entities.Permission.Tribool;
 import dev.teamnight.nightweb.core.entities.Setting;
 import dev.teamnight.nightweb.core.entities.User;
 import dev.teamnight.nightweb.core.entities.UserPermission;
@@ -61,6 +63,7 @@ import dev.teamnight.nightweb.core.servlets.LoginServlet;
 import dev.teamnight.nightweb.core.servlets.LogoutServlet;
 import dev.teamnight.nightweb.core.servlets.RegistrationServlet;
 import dev.teamnight.nightweb.core.servlets.TestServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminLoginServlet;
 import dev.teamnight.nightweb.core.template.TemplateManager;
 import dev.teamnight.nightweb.core.template.TemplateManagerImpl;
 import freemarker.template.TemplateModelException;
@@ -184,6 +187,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		//Add core entities
 		Configuration hibernateConf = new Configuration()
 				.configure(hibernateConfigPath.toFile())
+				.setProperty("hibernate.current_session_context_class", "org.hibernate.context.internal.ThreadLocalSessionContext")
 				.addAnnotatedClass(ModuleData.class)
 				.addAnnotatedClass(ApplicationData.class)
 				.addAnnotatedClass(Setting.class)
@@ -265,8 +269,9 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 			appService.save(data);
 		}
 		
-		LOGGER.info("Creating default settings if not already existing...");
+		LOGGER.info("Creating default settings & permissions if not already existing...");
 		this.createDefaultSettings(data.getModuleData());
+		this.createDefaultPermissions(data.getModuleData());
 		
 		this.templateManager = new TemplateManagerImpl(NightWeb.TEMPLATES_DIR, NightWeb.LANG_DIR);
 		try {
@@ -292,8 +297,6 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	 * 
 	 */
 	private void createDefaultSettings(ModuleData data) {
-		LOGGER.debug("ModuleData of core: " + data.getIdentifier());
-		
 		Setting defaultLang = new Setting("defaultLanguage", "en", Type.STRING, data);
 		Setting dG = new Setting("defaultGroup", "-1", Type.NUMBER, data);
 		Setting gG = new Setting("guestGroup", "-1", Type.NUMBER, data);
@@ -302,6 +305,13 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		Setting activationType = new Setting("activationType", ActivationType.ACTIVATION.toString(), Type.STRING, data);
 		
 		this.serviceMan.getService(SettingService.class).create(defaultLang, dG, gG, regEnabled, loginEnabled, activationType);
+	}
+	
+	private void createDefaultPermissions(ModuleData data) {
+		Permission bypassDisabledLogin = new Permission("nightweb.admin.canBypassDisabledLogin", Tribool.NEUTRAL, data);
+		Permission canUseACP = new Permission("nightweb.admin.canUseACP", Tribool.NEUTRAL, data);
+		
+		this.serviceMan.getService(PermissionService.class).create(bypassDisabledLogin, canUseACP);
 	}
 
 	/**
@@ -337,11 +347,16 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		
 		ctx.registerServletHolder(staticHolder, "/static/*");
 		
-		ctx.registerServlet(TestServlet.class, "/");
 		ctx.registerServlet(RegistrationServlet.class, "/register");
 		ctx.registerServlet(ActivationServlet.class, "/activation/*");
 		ctx.registerServlet(LoginServlet.class, "/login");
 		ctx.registerServlet(LogoutServlet.class, "/logout");
+		
+		//Admin
+		ctx.registerServlet(AdminLoginServlet.class, "/admin/login");
+		
+		//Test
+		ctx.registerServlet(TestServlet.class, "/test");
 	}
 	
 	// ----------------------------------------------------------------------- //
