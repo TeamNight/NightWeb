@@ -17,6 +17,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import dev.teamnight.nightweb.core.StringUtil;
 import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
 
@@ -52,7 +53,7 @@ public class AuthenticationFilter implements Filter {
 			WebSession session = WebSession.getSession(req);
 			
 			if(session == null || !session.isLoggedIn()) {
-				resp.sendRedirect(this.data.getContextPath() + "/login");
+				resp.sendRedirect(StringUtil.filterURL(this.data.getContextPath() + "/login"));
 				return;
 			}
 			

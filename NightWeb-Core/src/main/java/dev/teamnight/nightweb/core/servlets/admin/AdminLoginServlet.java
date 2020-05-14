@@ -100,7 +100,7 @@ public class AdminLoginServlet extends HttpServlet {
 		session.setUser(user);
 		req.getSession(true).setAttribute("session", session);
 		
-		resp.sendRedirect(ctx.getContextPath() + "/admin");
+		resp.sendRedirect(ctx.getContextPath() + "admin");
 	}
 
 }

@@ -9,9 +9,10 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.Query;
 
+import dev.teamnight.nightweb.core.entities.DefaultPermission;
 import dev.teamnight.nightweb.core.entities.Permission;
 
-public class PermissionService extends AbstractService<Permission> {
+public class PermissionService extends AbstractService<DefaultPermission> {
 
 	/**
 	 * @param factory
@@ -20,22 +21,26 @@ public class PermissionService extends AbstractService<Permission> {
 		super(factory);
 	}
 	
-	public Permission getByName(String name) {
+	public DefaultPermission getByName(String name) {
+		return this.getByName(name, DefaultPermission.class);
+	}
+	
+	public <T extends Permission> T getByName(String name, Class<T> type) {
 		Session session = this.factory().getCurrentSession();
 		session.beginTransaction();
 		
-		Query<Permission> query = session.createQuery("FROM " + this.getType().getCanonicalName() + " P WHERE P.name = :name", this.getType());
+		Query<T> query = session.createQuery("FROM " + type.getCanonicalName() + " P WHERE P.name = :name", type);
 		query.setParameter("name", name);
 		
-		Permission perm = query.uniqueResult();
+		T perm = query.uniqueResult();
 		session.getTransaction().commit();
 		
 		return perm;
 	}
 	
 	@Override
-	public Serializable create(Permission permission) {
-		if(this.getByName(permission.getName()) != null) {
+	public Serializable create(DefaultPermission permission) {
+		if(this.getByName(permission.getName(), permission.getClass()) != null) {
 			return null;
 		}
 		
@@ -54,10 +59,10 @@ public class PermissionService extends AbstractService<Permission> {
 		return key;
 	}
 	
-	public void create(Permission permission, Permission...permissions) {
+	public void create(DefaultPermission permission, DefaultPermission...permissions) {
 		this.create(permission);
 		
-		for(Permission perm : permissions) {
+		for(DefaultPermission perm : permissions) {
 			this.create(perm);
 		}
 	}

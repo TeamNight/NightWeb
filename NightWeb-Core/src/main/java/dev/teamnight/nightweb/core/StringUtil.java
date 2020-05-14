@@ -61,4 +61,8 @@ public final class StringUtil {
 		return htmlPolicy.sanitize(html);
 	}
 	
+	public static String filterURL(String url) {
+		return url.replaceAll("//", "/");
+	}
+	
 }

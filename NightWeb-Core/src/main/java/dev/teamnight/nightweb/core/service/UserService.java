@@ -14,6 +14,17 @@ public class UserService extends AbstractService<User> {
 		super(factory);
 	}
 	
+	public void loadCollections(User user) {
+		Session session = this.factory().getCurrentSession();
+		session.beginTransaction();
+		
+		User loaded = session.get(User.class, user.getId());
+		user.setGroups(loaded.getGroups());
+		user.setPermissions(loaded.getPermissions());
+		
+		session.getTransaction().commit();
+	}
+	
 	public User getByUsername(String username) {
 		Session session = this.factory().getCurrentSession();
 		session.beginTransaction();

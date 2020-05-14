@@ -23,7 +23,7 @@ public class UserPermission extends Permission {
 	
 	protected UserPermission() {}
 	
-	public UserPermission(User user, Permission permission) {
+	public UserPermission(User user, DefaultPermission permission) {
 		super(permission.getName(), permission.getType(), permission.getValue(), permission.getModule());
 		this.user = user;
 	}

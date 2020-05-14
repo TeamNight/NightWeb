@@ -74,9 +74,7 @@ public class User implements PermissionOwner<UserPermission> {
 	
 	@OneToMany
 	@JoinTable(
-			name = "user_groups",
-			joinColumns = @JoinColumn(name = "groupId"),
-			inverseJoinColumns = @JoinColumn(name = "userId")
+			name = "user_groups"
 			)
 	private List<Group> groups = new ArrayList<Group>();
 	

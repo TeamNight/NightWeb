@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -33,9 +34,9 @@ import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.Server;
 import dev.teamnight.nightweb.core.WebSession;
-import dev.teamnight.nightweb.core.annotations.AdminServlet;
 import dev.teamnight.nightweb.core.entities.ActivationType;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
+import dev.teamnight.nightweb.core.entities.DefaultPermission;
 import dev.teamnight.nightweb.core.entities.Group;
 import dev.teamnight.nightweb.core.entities.GroupPermission;
 import dev.teamnight.nightweb.core.entities.ModuleData;
@@ -63,7 +64,9 @@ import dev.teamnight.nightweb.core.servlets.LoginServlet;
 import dev.teamnight.nightweb.core.servlets.LogoutServlet;
 import dev.teamnight.nightweb.core.servlets.RegistrationServlet;
 import dev.teamnight.nightweb.core.servlets.TestServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminDashboardServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminLoginServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminModuleList;
 import dev.teamnight.nightweb.core.template.TemplateManager;
 import dev.teamnight.nightweb.core.template.TemplateManagerImpl;
 import freemarker.template.TemplateModelException;
@@ -191,7 +194,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 				.addAnnotatedClass(ModuleData.class)
 				.addAnnotatedClass(ApplicationData.class)
 				.addAnnotatedClass(Setting.class)
-				.addAnnotatedClass(Permission.class)
+				.addAnnotatedClass(DefaultPermission.class)
 				.addAnnotatedClass(UserPermission.class)
 				.addAnnotatedClass(GroupPermission.class)
 				.addAnnotatedClass(User.class)
@@ -269,9 +272,11 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 			appService.save(data);
 		}
 		
+		//Doing setup things
 		LOGGER.info("Creating default settings & permissions if not already existing...");
 		this.createDefaultSettings(data.getModuleData());
 		this.createDefaultPermissions(data.getModuleData());
+		this.createDefaultGroups(data);
 		
 		this.templateManager = new TemplateManagerImpl(NightWeb.TEMPLATES_DIR, NightWeb.LANG_DIR);
 		try {
@@ -292,10 +297,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		LOGGER.info("Starting server");
 		this.server.start();
 	}
-	
-	/**
-	 * 
-	 */
+
 	private void createDefaultSettings(ModuleData data) {
 		Setting defaultLang = new Setting("defaultLanguage", "en", Type.STRING, data);
 		Setting dG = new Setting("defaultGroup", "-1", Type.NUMBER, data);
@@ -308,10 +310,34 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	}
 	
 	private void createDefaultPermissions(ModuleData data) {
-		Permission bypassDisabledLogin = new Permission("nightweb.admin.canBypassDisabledLogin", Tribool.NEUTRAL, data);
-		Permission canUseACP = new Permission("nightweb.admin.canUseACP", Tribool.NEUTRAL, data);
+		DefaultPermission bypassDisabledLogin = new DefaultPermission("nightweb.admin.canBypassDisabledLogin", Tribool.NEUTRAL, data);
+		DefaultPermission canUseACP = new DefaultPermission("nightweb.admin.canUseACP", Tribool.NEUTRAL, data);
 		
 		this.serviceMan.getService(PermissionService.class).create(bypassDisabledLogin, canUseACP);
+	}
+	
+	private void createDefaultGroups(ApplicationData data) {
+		//TODO change this to a setup routine or else
+		Group guestGroup = new Group("Unregistered");
+		Group registered = new Group("Registered");
+		Group administrators = new Group("Administrators");
+		
+		List<DefaultPermission> permissions = this.serviceMan.getService(PermissionService.class).getAll();
+		administrators.setPermissions(
+				permissions.stream()
+					.map(perm -> new GroupPermission(administrators, perm))
+					.map(perm -> {
+						perm.setValue(Tribool.TRUE.getAsString());
+						
+						return perm;
+					})
+					.collect(Collectors.toList())
+				);
+		
+		administrators.setPriority(1000);
+		administrators.setStaffGroup(true);
+		
+		this.serviceMan.getService(GroupService.class).create(guestGroup, registered, administrators);
 	}
 
 	/**
@@ -353,7 +379,9 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		ctx.registerServlet(LogoutServlet.class, "/logout");
 		
 		//Admin
+		ctx.registerServlet(AdminDashboardServlet.class, "/admin");
 		ctx.registerServlet(AdminLoginServlet.class, "/admin/login");
+		ctx.registerServlet(AdminModuleList.class, "/admin/modules/*");
 		
 		//Test
 		ctx.registerServlet(TestServlet.class, "/test");
@@ -365,7 +393,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 
 	@Override
 	public String getImplementationName() {
-		return "Standard";
+		return "NightWeb Core Standard";
 	}
 
 	@Override

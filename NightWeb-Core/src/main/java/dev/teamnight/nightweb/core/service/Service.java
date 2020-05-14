@@ -5,15 +5,8 @@ package dev.teamnight.nightweb.core.service;
 
 import java.io.Serializable;
 import java.util.List;
-import org.hibernate.Session;
 
 public interface Service<T> {
-	
-	/**
-	 * Associates an entity with the session of the current context
-	 * @param entity
-	 */
-	public void associateToSession(Session session, T entity);
 	
 	/**
 	 * Retrieves one object using the key, associations can only be retrieved when the session is active
@@ -23,7 +16,7 @@ public interface Service<T> {
 	public T getOne(Serializable key);
 	
 	/**
-	 * Retrieves all objects in a table, does not fetch associations in collections.
+	 * Retrieves all objects in a table, associations can only be retrieved when the session is active.
 	 * @return
 	 */
 	public List<T> getAll();

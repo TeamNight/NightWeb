@@ -18,6 +18,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import dev.teamnight.nightweb.core.AdminSession;
+import dev.teamnight.nightweb.core.StringUtil;
 import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
 
@@ -53,7 +54,7 @@ public class AdminAuthenticationFilter implements Filter {
 			AdminSession session = WebSession.getSession(req, AdminSession.class);
 			
 			if(session == null || !session.isLoggedIn()) {
-				resp.sendRedirect(this.data.getContextPath() + "/admin/login");
+				resp.sendRedirect(StringUtil.filterURL(this.data.getContextPath() + "/admin/login"));
 				return;
 			}
 			

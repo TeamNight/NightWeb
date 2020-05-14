@@ -3,6 +3,7 @@
  */
 package dev.teamnight.nightweb.core.service;
 
+import java.io.Serializable;
 import java.util.List;
 
 import org.hibernate.Session;
@@ -18,6 +19,23 @@ public class GroupService extends AbstractService<Group> {
 	 */
 	public GroupService(SessionFactory factory) {
 		super(factory);
+	}
+	
+	public void create(Group group, Group...groups) {
+		this.create(group);
+		
+		for(Group g : groups) {
+			this.create(g);
+		}
+	}
+	
+	@Override
+	public Serializable create(Group group) {
+		if(this.getByName(group.getName()) != null) {
+			return null;
+		}
+		
+		return super.create(group);
 	}
 	
 	public Group getByName(String name) {
@@ -40,7 +58,6 @@ public class GroupService extends AbstractService<Group> {
 		Query<Group> query = session.createQuery("FROM " + this.getType().getCanonicalName() + " G WHERE staffGroup = true", this.getType());
 		
 		List<Group> groups = query.getResultList();
-		
 		session.getTransaction().commit();
 		
 		return groups;

@@ -4,7 +4,6 @@
 package dev.teamnight.nightweb.core.servlets;
 
 import java.io.IOException;
-import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -40,7 +39,7 @@ public class TestServlet extends HttpServlet {
 		UserService serv = ctx.getServiceManager().getService(UserService.class);
 		
 		try {
-			User user = serv.getByUsername("admin");
+			User user = serv.getOne(4L);
 			
 			user.hasPermission("test");
 		} catch(LazyInitializationException e) {

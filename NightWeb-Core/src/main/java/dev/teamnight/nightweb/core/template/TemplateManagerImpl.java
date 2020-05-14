@@ -70,7 +70,15 @@ public class TemplateManagerImpl implements TemplateManager {
 			mainMenu.addLeftItem(1, mainMenu.new Item("Home", "/"));
 			mainMenu.addLeftItem(2, mainMenu.new Item("Articles", "/"));
 			
+			Menu adminMenu = new Menu();
+			adminMenu.setName("adminMenu");
+			adminMenu.setActiveMenu("Dashboard");
+			adminMenu.addLeftItem(1, adminMenu.new Item("Dashboard", "/admin"));
+			adminMenu.addLeftItem(2, adminMenu.new Item("Modules", "/admin/modules"));
+			adminMenu.addLeftItem(3, adminMenu.new Item("Users", "/admin/users"));
+			
 			this.configuration.setSharedVariable("mainMenu", mainMenu);
+			this.configuration.setSharedVariable("adminMenu", adminMenu);
 		} catch (IOException | TemplateModelException e) {
 			e.printStackTrace();
 		}

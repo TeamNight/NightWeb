@@ -48,6 +48,13 @@ public class ModuleData {
 		this.version = data.getVersion();
 		this.enabled = false;
 	}
+	
+	/**
+	 * @return the id
+	 */
+	public long getId() {
+		return id;
+	}
 
 	/**
 	 * @return the name

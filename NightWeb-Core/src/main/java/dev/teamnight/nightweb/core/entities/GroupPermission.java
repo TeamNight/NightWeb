@@ -20,8 +20,10 @@ public class GroupPermission extends Permission {
 	@ManyToOne
 	@JoinColumn(name = "groupId", nullable = false)
 	private Group group;
+	
+	protected GroupPermission() {}
 
-	public GroupPermission(Group group, Permission permission) {
+	public GroupPermission(Group group, DefaultPermission permission) {
 		super(permission.getName(), permission.getType(), permission.getValue(), permission.getModule());
 		this.group = group;
 	}

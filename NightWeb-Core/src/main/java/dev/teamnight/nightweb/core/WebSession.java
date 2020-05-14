@@ -9,9 +9,11 @@ import javax.servlet.http.HttpSessionBindingEvent;
 import javax.servlet.http.HttpSessionBindingListener;
 
 import org.apache.logging.log4j.LogManager;
+import org.hibernate.Hibernate;
 
 import dev.teamnight.nightweb.core.entities.Permission;
 import dev.teamnight.nightweb.core.entities.User;
+import dev.teamnight.nightweb.core.service.UserService;
 
 /**
  * @author Jonas
@@ -120,7 +122,11 @@ public class WebSession implements HttpSessionBindingListener {
 	 */
 	public void update() {
 		if(this.user != null) {
-			this.user = this.context.getDatabaseSession().get(User.class, this.user.getId());
+			UserService service = this.context.getServiceManager().getService(UserService.class);
+			this.user = service.getOne(this.user.getId());
+			service.loadCollections(this.user);
+			
+			LogManager.getLogger().debug("Groups: " + this.user.getGroups().size());
 		}
 	}
 	

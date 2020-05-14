@@ -19,6 +19,10 @@ public class PathParameters {
 	// 2. (activation, admin@teamnight.dev, abcdef)
 	// 3. (1: activation, 2: admin@teamnight.dev, 3: abcdef)
 	public PathParameters(String pathInfo) {
+		if(pathInfo == null) {
+			return;
+		}
+		
 		pathInfo = pathInfo.substring(1);
 		
 		if(pathInfo.isBlank()) {
@@ -37,7 +41,11 @@ public class PathParameters {
 	}
 	
 	public String getParameter(int index) {
-		return parameters.get(index);
+		if(index < this.parameters.size()) {
+			return parameters.get(index);
+		} else {
+			return null;
+		}
 	}
 	
 	public int size() {

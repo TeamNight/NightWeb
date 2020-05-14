@@ -10,10 +10,34 @@ import java.util.List;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 
+import org.hibernate.Hibernate;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.Query;
 
+/**
+ * This implementation provides useful methods for services. If you use collections within your entity, you need to implement own methods to initialize the collections
+ * either using Hibernate#initialize or by using LEFT JOIN FETCH in a HQL Query. You may provide various methods for getting the Entity with and without the collections
+ * loaded.
+ * 
+ * You can create a method that loads these collections like the example of UserService:
+ * <pre>
+ * public void loadCollections(User user) {
+		Session session = this.factory().getCurrentSession();
+		session.beginTransaction();
+		
+		User loaded = session.get(User.class, user.getId());
+		user.setGroups(loaded.getGroups());
+		user.setPermissions(loaded.getPermissions());
+		
+		session.getTransaction().commit();
+	}
+ * </pre>
+ * 
+ * @author Jonas
+ *
+ * @param <T>
+ */
 public abstract class AbstractService<T> implements Service<T> {
 
 	private final Class<T> type;
@@ -44,6 +68,8 @@ public abstract class AbstractService<T> implements Service<T> {
 		session.beginTransaction();
 		
 		T entity = session.get(this.type, key);
+		Hibernate.initialize(entity); //does not work
+		
 		session.getTransaction().commit();
 		
 		return entity;
@@ -210,15 +236,6 @@ public abstract class AbstractService<T> implements Service<T> {
 		session.getTransaction().commit();
 		
 		return count;
-	}
-	
-	@Override
-	public void associateToSession(Session session, T entity) {
-		if(this.type.isAssignableFrom(entity.getClass())) {
-			entity = this.type.cast(session.merge(entity));
-		} else {
-			session.merge(entity);
-		}
 	}
 	
 	protected SessionFactory factory() {
