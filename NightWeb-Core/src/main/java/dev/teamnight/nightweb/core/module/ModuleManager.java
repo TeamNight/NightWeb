@@ -9,6 +9,7 @@ import java.util.List;
 import dev.teamnight.nightweb.core.Application;
 import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.entities.ModuleData;
+import dev.teamnight.nightweb.core.entities.ModuleMetaFile;
 import dev.teamnight.nightweb.core.exceptions.ModuleException;
 
 public interface ModuleManager {
@@ -46,6 +47,8 @@ public interface ModuleManager {
 	public List<Application> getApplications();
 	
 	public ModuleData getData(String identifier);
+	
+	public ModuleMetaFile getMeta(String identifier);
 	
 	public void registerLoader(Class<? extends ModuleLoader> loader) throws IllegalArgumentException;
 	

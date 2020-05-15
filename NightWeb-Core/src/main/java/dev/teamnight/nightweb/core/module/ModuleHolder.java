@@ -5,6 +5,7 @@ package dev.teamnight.nightweb.core.module;
 
 import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.entities.ModuleData;
+import dev.teamnight.nightweb.core.entities.ModuleMetaFile;
 
 public class ModuleHolder {
 

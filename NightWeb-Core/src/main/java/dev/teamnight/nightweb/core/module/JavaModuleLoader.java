@@ -20,6 +20,8 @@ import javax.xml.bind.Unmarshaller;
 
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightModule;
+import dev.teamnight.nightweb.core.entities.ModuleMetaFile;
+import dev.teamnight.nightweb.core.exceptions.IllegalModuleIdentifierException;
 import dev.teamnight.nightweb.core.exceptions.ModuleException;
 
 import org.apache.logging.log4j.LogManager;
@@ -46,6 +48,10 @@ public class JavaModuleLoader implements ModuleLoader {
 		
 		if(metaFile == null) {
 			throw new ModuleException("Module.xml could not be loaded");
+		}
+		
+		if(metaFile.getModuleIdentifier().isBlank() || metaFile.getModuleIdentifier().equalsIgnoreCase("dev.teamnight.nightweb.core")) {
+			throw new IllegalModuleIdentifierException("The module name \"" + metaFile.getModuleIdentifier() + "\" is not allowed");
 		}
 		
 		LOGGER.debug("Loading module into ModuleLayer");

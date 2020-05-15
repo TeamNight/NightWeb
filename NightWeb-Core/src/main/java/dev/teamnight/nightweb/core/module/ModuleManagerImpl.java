@@ -25,6 +25,8 @@ import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.entities.ModuleData;
+import dev.teamnight.nightweb.core.entities.ModuleMetaFile;
+import dev.teamnight.nightweb.core.exceptions.IllegalModuleIdentifierException;
 import dev.teamnight.nightweb.core.exceptions.ModuleException;
 import dev.teamnight.nightweb.core.impl.ModuleContext;
 import dev.teamnight.nightweb.core.service.ModuleService;
@@ -97,6 +99,10 @@ public class ModuleManagerImpl implements ModuleManager {
 		LOGGER.debug("Getting meta file");
 		ModuleMetaFile mf = loader.getModuleMetaFile(path);
 		
+		if(mf.getModuleIdentifier().isBlank() || mf.getModuleIdentifier().equalsIgnoreCase("dev.teamnight.nightweb.core")) {
+			throw new IllegalModuleIdentifierException(); //If another module loader tried to ignore this case
+		}
+		
 		//Set identifier is important
 		module.setIdentifier(mf.getModuleIdentifier());
 		
@@ -110,12 +116,16 @@ public class ModuleManagerImpl implements ModuleManager {
 		
 		LOGGER.info("Loaded module >> " + mf.getModuleIdentifier());
 		
+		if(this.getModuleByIdentifier(mf.getModuleIdentifier()) != null) {
+			throw new IllegalModuleIdentifierException("Two modules with the name \"" + mf.getModuleIdentifier() + "\" found. This is not allowed");
+		}
+		
 		this.loadedModules.add(holder);
 	}
 
 	@Override
 	public NightModule getModuleBySimpleName(String name) {
-		return null;
+		return this.loadedModules.stream().filter(holder -> holder.getMetaFile().getModuleName().equalsIgnoreCase(name)).map(holder -> holder.getModule()).findFirst().orElse(null);
 	}
 
 	@Override
@@ -215,7 +225,6 @@ public class ModuleManagerImpl implements ModuleManager {
 		if(data == null) {
 			LOGGER.warn("Could not enable module " + holder.getMetaFile().getModuleIdentifier() + ". Module is not installed.");
 			return false;
-			//TODO add boolean in order to check if module was actually enabled
 		}
 		
 		//Add data to holder
@@ -232,6 +241,12 @@ public class ModuleManagerImpl implements ModuleManager {
 		LOGGER.debug("Resolving dependencies");
 		for(String dependencyName : dependencies) {
 			LOGGER.debug("Dependency to be resolved: " + dependencyName);
+			
+			if(dependencyName.equalsIgnoreCase("dev.teamnight.nightweb.core")) {
+				enabledDependencies.add(dependencyName);
+				continue;
+			}
+			
 			Optional<NightModule> dependency = this.loadedModules.stream()
 					.filter(mh -> mh.getMetaFile().getModuleIdentifier().equals(dependencyName))
 					.map(mh -> mh.getModule())
@@ -264,7 +279,11 @@ public class ModuleManagerImpl implements ModuleManager {
 					.orElse(null);
 			
 			if(parentApplication == null) {
-				throw new ModuleException("A module needs at least one application as dependency. Conflicting module is " + holder.getMetaFile().getModuleIdentifier());
+				if(dependencies.contains("dev.teamnight.nightweb.core")) {
+					parentApplication = (Application) this.core;
+				} else {
+					throw new ModuleException("A module needs at least one application as dependency. Conflicting module is " + holder.getMetaFile().getModuleIdentifier());
+				}
 			}
 			
 			ApplicationContext appCtx = (ApplicationContext) parentApplication.getContext();
@@ -404,6 +423,8 @@ public class ModuleManagerImpl implements ModuleManager {
 		
 		service.save(data);
 		LOGGER.info("Installed module >> " + data.getIdentifier());
+		
+		this.enableModule(module);
 	}
 	
 	@Override
@@ -411,6 +432,15 @@ public class ModuleManagerImpl implements ModuleManager {
 		return this.loadedModules.stream()
 				.filter(holder -> holder.getMetaFile().getModuleIdentifier().equalsIgnoreCase(identifier))
 				.map(holder -> holder.getData())
+				.findFirst()
+				.orElse(null);
+	}
+	
+	@Override
+	public ModuleMetaFile getMeta(String identifier) {
+		return this.loadedModules.stream()
+				.filter(holder -> holder.getMetaFile().getModuleIdentifier().equalsIgnoreCase(identifier))
+				.map(holder -> holder.getMetaFile())
 				.findFirst()
 				.orElse(null);
 	}

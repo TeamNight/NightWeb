@@ -40,7 +40,6 @@ import dev.teamnight.nightweb.core.entities.DefaultPermission;
 import dev.teamnight.nightweb.core.entities.Group;
 import dev.teamnight.nightweb.core.entities.GroupPermission;
 import dev.teamnight.nightweb.core.entities.ModuleData;
-import dev.teamnight.nightweb.core.entities.Permission;
 import dev.teamnight.nightweb.core.entities.Permission.Tribool;
 import dev.teamnight.nightweb.core.entities.Setting;
 import dev.teamnight.nightweb.core.entities.User;
@@ -66,7 +65,10 @@ import dev.teamnight.nightweb.core.servlets.RegistrationServlet;
 import dev.teamnight.nightweb.core.servlets.TestServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminDashboardServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminLoginServlet;
-import dev.teamnight.nightweb.core.servlets.admin.AdminModuleList;
+import dev.teamnight.nightweb.core.servlets.admin.AdminModuleEditServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminModuleInstallListServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminModuleInstallServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminModuleListServlet;
 import dev.teamnight.nightweb.core.template.TemplateManager;
 import dev.teamnight.nightweb.core.template.TemplateManagerImpl;
 import freemarker.template.TemplateModelException;
@@ -381,7 +383,10 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		//Admin
 		ctx.registerServlet(AdminDashboardServlet.class, "/admin");
 		ctx.registerServlet(AdminLoginServlet.class, "/admin/login");
-		ctx.registerServlet(AdminModuleList.class, "/admin/modules/*");
+		ctx.registerServlet(AdminModuleListServlet.class, "/admin/modules/*");
+		ctx.registerServlet(AdminModuleEditServlet.class, "/admin/module/*");
+		ctx.registerServlet(AdminModuleInstallListServlet.class, "/admin/install-modules");
+		ctx.registerServlet(AdminModuleInstallServlet.class, "/admin/install");
 		
 		//Test
 		ctx.registerServlet(TestServlet.class, "/test");
