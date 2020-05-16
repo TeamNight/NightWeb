@@ -15,6 +15,9 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 /**
  * @author Jonas
  *
@@ -43,7 +46,8 @@ public class Setting {
 	@Column
 	private String category;
 	
-	@ManyToOne
+	@ManyToOne(optional = false)
+	@OnDelete(action = OnDeleteAction.CASCADE)
 	@JoinColumn(name = "moduleId", nullable = false)
 	private ModuleData module;
 	

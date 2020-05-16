@@ -11,6 +11,9 @@ import javax.persistence.Id;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 /**
  * @author Jonas
  *
@@ -37,6 +40,7 @@ public class ApplicationData {
 	@Column(name = "contextPath", nullable = false)
 	private String contextPath;
 	
+	@OnDelete(action = OnDeleteAction.CASCADE)
 	@OneToOne(cascade = CascadeType.ALL, optional = false)
 	private ModuleData moduleData;
 	

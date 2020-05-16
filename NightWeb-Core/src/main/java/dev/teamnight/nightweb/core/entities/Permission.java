@@ -4,13 +4,15 @@
 package dev.teamnight.nightweb.core.entities;
 
 import javax.persistence.Column;
-import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.MappedSuperclass;
+
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @MappedSuperclass
 public class Permission {
@@ -28,7 +30,8 @@ public class Permission {
 	@Column(nullable = false)
 	private String value;
 	
-	@ManyToOne(fetch = FetchType.LAZY)
+	@ManyToOne(optional = false)
+	@OnDelete(action = OnDeleteAction.CASCADE)
 	@JoinColumn(name = "moduleId", nullable = false)
 	private ModuleData module;
 	

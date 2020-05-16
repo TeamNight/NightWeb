@@ -69,6 +69,7 @@ import dev.teamnight.nightweb.core.servlets.admin.AdminModuleEditServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminModuleInstallListServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminModuleInstallServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminModuleListServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminModuleUninstallServlet;
 import dev.teamnight.nightweb.core.template.TemplateManager;
 import dev.teamnight.nightweb.core.template.TemplateManagerImpl;
 import freemarker.template.TemplateModelException;
@@ -387,6 +388,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		ctx.registerServlet(AdminModuleEditServlet.class, "/admin/module/*");
 		ctx.registerServlet(AdminModuleInstallListServlet.class, "/admin/install-modules");
 		ctx.registerServlet(AdminModuleInstallServlet.class, "/admin/install");
+		ctx.registerServlet(AdminModuleUninstallServlet.class, "/admin/uninstall/*");
 		
 		//Test
 		ctx.registerServlet(TestServlet.class, "/test");
