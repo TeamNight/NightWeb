@@ -10,6 +10,7 @@ import java.nio.file.Paths;
 import java.util.Date;
 
 import dev.teamnight.nightweb.core.entities.ErrorLogEntry;
+import dev.teamnight.nightweb.core.events.EventManager;
 import dev.teamnight.nightweb.core.service.ErrorLogService;
 import dev.teamnight.nightweb.core.service.GroupService;
 import dev.teamnight.nightweb.core.service.PermissionService;
@@ -45,6 +46,10 @@ public final class NightWeb {
 
 	public static TemplateManager getTemplateManager() {
 		return core.getTemplateManager();
+	}
+	
+	public static EventManager getEventManager() {
+		return core.getEventManager();
 	}
 
 	public static String getMailService() {

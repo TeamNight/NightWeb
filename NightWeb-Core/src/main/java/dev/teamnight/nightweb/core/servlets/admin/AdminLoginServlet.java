@@ -11,10 +11,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.validator.routines.EmailValidator;
+import org.apache.logging.log4j.LogManager;
+import org.eclipse.jetty.util.URIUtil;
 
-import dev.teamnight.nightweb.core.AdminSession;
+import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
-import dev.teamnight.nightweb.core.WebSession;
+import dev.teamnight.nightweb.core.StringUtil;
 import dev.teamnight.nightweb.core.entities.User;
 import dev.teamnight.nightweb.core.service.UserService;
 
@@ -32,10 +34,12 @@ public class AdminLoginServlet extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		Context ctx = Context.get(req);
-		AdminSession session = WebSession.getSession(req, AdminSession.class);
 		
-		if(session != null && session.isLoggedIn()) {
-			resp.sendRedirect(ctx.getContextPath() + "/admin");
+		LogManager.getLogger().debug("Session ID: " + req.getSession().getId());
+		req.getSession().getAttributeNames().asIterator().forEachRemaining(string -> LogManager.getLogger().debug("Session attribute present: " + string));
+		
+		if(req.getSession().getAttribute("dev.teamnight.nightweb.core.session.adminSession") != null) {
+			resp.sendRedirect(StringUtil.filterURL(ctx.getContextPath() + "/admin"));
 		}
 		
 		//Build the template
@@ -45,9 +49,8 @@ public class AdminLoginServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		Context ctx = Context.get(req);
-		AdminSession session = WebSession.getSession(req, AdminSession.class);
 		
-		if(session != null && session.isLoggedIn()) {
+		if(req.getSession().getAttribute("dev.teamnight.nightweb.core.session.adminSession") != null) {
 			resp.sendRedirect(ctx.getContextPath() + "/admin");
 		}
 		
@@ -89,18 +92,20 @@ public class AdminLoginServlet extends HttpServlet {
 		}
 		
 		//Check user password
-		if(!user.getPassword().equals(user.createHash(password))) {
+		Authenticator auth = ctx.getAuthenticator(req.getSession());
+		auth.setUser(user);
+		
+		if(!auth.authenticate(password)) {
 			ctx.getTemplate("admin/login.tpl").assign("failed", "invalidPasswordError").send(resp);
 			return;
 		}
 		
-		if(session == null) {
-			session = new AdminSession(ctx);
-		}
-		session.setUser(user);
-		req.getSession(true).setAttribute("session", session);
+		req.getSession().setAttribute("dev.teamnight.nightweb.core.session.adminSession", true);
 		
-		resp.sendRedirect(ctx.getContextPath() + "admin");
+		LogManager.getLogger().debug("CTXPATH: " + ctx.getContextPath());
+		LogManager.getLogger().debug("CTXPATH ENC: " + URIUtil.encodePath(ctx.getContextPath()));
+		
+		resp.sendRedirect(StringUtil.filterURL(ctx.getContextPath() + "/admin"));
 	}
 
 }

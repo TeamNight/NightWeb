@@ -3,22 +3,26 @@
  */
 package dev.teamnight.nightweb.core.entities;
 
-import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
+
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 /**
  * @author Jonas
  *
  */
 @Entity
-@Table(name = "user_settings", uniqueConstraints = @UniqueConstraint(columnNames = {"settingKey", "user"}))
+@Table(name = "user_settings", uniqueConstraints = @UniqueConstraint(columnNames = {"settingKey", "userId"}))
 public class UserSetting extends Setting {
 
-	@ManyToOne
-	@Column(nullable = false)
+	@ManyToOne(optional = false)
+	@OnDelete(action = OnDeleteAction.CASCADE)
+	@JoinColumn(name = "userId", nullable = false)
 	private User user;
 	
 	public UserSetting(Setting baseSetting) {

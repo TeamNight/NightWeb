@@ -9,6 +9,7 @@ import java.util.EnumSet;
 import javax.servlet.DispatcherType;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpSession;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -20,10 +21,11 @@ import org.hibernate.SessionFactory;
 
 import dev.teamnight.nightweb.core.Application;
 import dev.teamnight.nightweb.core.ApplicationContext;
+import dev.teamnight.nightweb.core.Authenticator;
+import dev.teamnight.nightweb.core.AuthenticatorFactory;
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.NightWeb;
-import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.annotations.AdminServlet;
 import dev.teamnight.nightweb.core.annotations.Authenticated;
 import dev.teamnight.nightweb.core.service.ApplicationService;
@@ -33,35 +35,42 @@ import dev.teamnight.nightweb.core.template.TemplateManager;
 
 public class JettyApplicationContext implements ApplicationContext {
 
-	private static FilterHolder authenticationFilter = new FilterHolder(
-			new AuthenticationFilter(
-					NightWeb.getServiceManager().getService(ApplicationService.class).getByIdentifier("dev.teamnight.nightweb.core")
-					)
-			);
 	private static FilterHolder adminAuthenticationFilter = new FilterHolder(
 			new AdminAuthenticationFilter(
 					NightWeb.getServiceManager().getService(ApplicationService.class).getByIdentifier("dev.teamnight.nightweb.core")
 					)
 			);
 	
+	private FilterHolder authenticationFilter = new FilterHolder(
+			new AuthenticationFilter(
+					this,
+					NightWeb.getServiceManager().getService(ApplicationService.class).getByIdentifier("dev.teamnight.nightweb.core")
+					)
+			);
+	
 	private final ServletContextHandler handler;
 	private final SessionFactory factory;
+	private final AuthenticatorFactory authFactory;
 	private final ServiceManager serviceManager;
 	private final TemplateManager templateManager; //TODO maybe change this two to NightWebCore in order to be available all the time
 	private Application application;
-
-	private Class<? extends WebSession> sessionType;
 	
 	/**
 	 * @param handler
 	 * @param factory
 	 * @param serviceManager
 	 */
-	public JettyApplicationContext(ServletContextHandler handler, SessionFactory factory, ServiceManager serviceManager, TemplateManager templateManager) {
+	public JettyApplicationContext(ServletContextHandler handler, SessionFactory factory, AuthenticatorFactory auth, ServiceManager serviceManager, TemplateManager templateManager) {
 		this.handler = handler;
 		this.factory = factory;
+		this.authFactory = auth;
 		this.serviceManager = serviceManager;
 		this.templateManager = templateManager;
+	}
+	
+	@Override
+	public String getModuleIdentifier() {
+		return this.application.getIdentifier();
 	}
 
 	@Override
@@ -163,6 +172,7 @@ public class JettyApplicationContext implements ApplicationContext {
 	}
 
 	private void registerServlet(ServletHolder holder, String pathSpec) {
+		holder.setName(holder.getHeldClass().getName());
 		this.handler.addServlet(holder, pathSpec);
 	}
 
@@ -204,27 +214,6 @@ public class JettyApplicationContext implements ApplicationContext {
 	public ServiceManager getServiceManager() {
 		return this.serviceManager;
 	}
-	
-
-	@Override
-	public Class<? extends WebSession> getSessionType() {
-		return this.sessionType != null ? this.sessionType : WebSession.class;
-	}
-	
-	@Override
-	public void setSessionType(Class<? extends WebSession> sessionType) throws IllegalArgumentException {
-		if(this.sessionType != null) {
-			throw new IllegalArgumentException("Session Type can only be set once");
-		}
-		
-		try {
-			this.sessionType.getConstructor(Context.class);
-		} catch (NoSuchMethodException | SecurityException e) {
-			throw new IllegalArgumentException("Missing public " + this.sessionType.getSimpleName() + "(Context) Constructor", e);
-		}
-		
-		this.sessionType = sessionType;
-	}
 
 	@Override
 	public TemplateManager getTemplateManager() {
@@ -234,6 +223,16 @@ public class JettyApplicationContext implements ApplicationContext {
 	@Override
 	public TemplateBuilder getTemplate(String templatePath) {
 		return this.templateManager.builder(templatePath, this);
+	}
+	
+	@Override
+	public Authenticator getAuthenticator(HttpSession session) {
+		return this.authFactory.getAuthenticator(this, session);
+	}
+
+	@Override
+	public Context getParent() {
+		return this;
 	}
 
 }

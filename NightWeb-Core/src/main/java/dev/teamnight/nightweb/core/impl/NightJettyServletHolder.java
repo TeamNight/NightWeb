@@ -4,14 +4,12 @@
 package dev.teamnight.nightweb.core.impl;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.UnavailableException;
-import javax.servlet.http.HttpServletRequest;
 
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -19,7 +17,6 @@ import org.eclipse.jetty.servlet.Source;
 
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightWeb;
-import dev.teamnight.nightweb.core.WebSession;
 
 /**
  * @author Jonas
@@ -56,26 +53,6 @@ public class NightJettyServletHolder extends ServletHolder {
 		}
 		
 		request.setAttribute("context", this.ctx);
-		
-		if(request instanceof HttpServletRequest) {
-			HttpServletRequest httpRequest = (HttpServletRequest) request;
-			
-			if(httpRequest.getSession(true).getAttribute("session") == null) {
-				Class<? extends WebSession> type = this.ctx.getSessionType();
-				
-				try {
-					WebSession session = type.getConstructor(Context.class).newInstance(this.ctx);
-					
-					httpRequest.getSession().setAttribute("session", session);
-				} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-						| InvocationTargetException | NoSuchMethodException | SecurityException e) {
-					e.printStackTrace();
-				}
-			} else {
-				WebSession session = (WebSession) httpRequest.getSession().getAttribute("session");
-				session.update();
-			}
-		}
 		
 		super.handle(baseRequest, request, response);
 	}

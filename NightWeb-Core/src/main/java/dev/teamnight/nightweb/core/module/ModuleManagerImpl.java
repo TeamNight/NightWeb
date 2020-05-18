@@ -33,6 +33,8 @@ import dev.teamnight.nightweb.core.service.ModuleService;
 
 public class ModuleManagerImpl implements ModuleManager {
 
+	//TODO: make concurrent
+	
 	private static Logger LOGGER = LogManager.getLogger();
 	
 	private NightWebCore core;

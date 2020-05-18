@@ -8,10 +8,12 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import javax.servlet.http.HttpSession;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
@@ -33,7 +35,6 @@ import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.Server;
-import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.entities.ActivationType;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
 import dev.teamnight.nightweb.core.entities.DefaultPermission;
@@ -41,11 +42,15 @@ import dev.teamnight.nightweb.core.entities.Group;
 import dev.teamnight.nightweb.core.entities.GroupPermission;
 import dev.teamnight.nightweb.core.entities.ModuleData;
 import dev.teamnight.nightweb.core.entities.Permission.Tribool;
-import dev.teamnight.nightweb.core.entities.Setting;
 import dev.teamnight.nightweb.core.entities.User;
 import dev.teamnight.nightweb.core.entities.UserPermission;
+import dev.teamnight.nightweb.core.entities.UserSetting;
 import dev.teamnight.nightweb.core.entities.XmlConfiguration;
+import dev.teamnight.nightweb.core.events.DefaultEventManagerImpl;
+import dev.teamnight.nightweb.core.events.EventManager;
+import dev.teamnight.nightweb.core.events.TemplatePreprocessEvent;
 import dev.teamnight.nightweb.core.entities.Setting.Type;
+import dev.teamnight.nightweb.core.entities.SystemSetting;
 import dev.teamnight.nightweb.core.module.JavaModuleLoader;
 import dev.teamnight.nightweb.core.module.ModuleManager;
 import dev.teamnight.nightweb.core.module.ModuleManagerImpl;
@@ -70,6 +75,7 @@ import dev.teamnight.nightweb.core.servlets.admin.AdminModuleInstallListServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminModuleInstallServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminModuleListServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminModuleUninstallServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminSettingsServlet;
 import dev.teamnight.nightweb.core.template.TemplateManager;
 import dev.teamnight.nightweb.core.template.TemplateManagerImpl;
 import freemarker.template.TemplateModelException;
@@ -90,10 +96,9 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	private PermissionService permService;
 	
 	private TemplateManager templateManager;
+	private EventManager eventManager;
 
 	private XmlConfiguration config;
-	
-	private List<WebSession> sessions = new ArrayList<WebSession>();
 	
 	public NightWebCoreImpl() {
 		//Initializing some things
@@ -196,36 +201,21 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 				.setProperty("hibernate.current_session_context_class", "org.hibernate.context.internal.ThreadLocalSessionContext")
 				.addAnnotatedClass(ModuleData.class)
 				.addAnnotatedClass(ApplicationData.class)
-				.addAnnotatedClass(Setting.class)
+				.addAnnotatedClass(SystemSetting.class)
+				.addAnnotatedClass(UserSetting.class)
 				.addAnnotatedClass(DefaultPermission.class)
 				.addAnnotatedClass(UserPermission.class)
 				.addAnnotatedClass(GroupPermission.class)
 				.addAnnotatedClass(User.class)
 				.addAnnotatedClass(Group.class);
 		
+		//Event Manager
+		this.eventManager = new DefaultEventManagerImpl();
+		
 		//Startup ModuleManager
 		LOGGER.debug("Setting up ModuleManagerImpl");
 		this.moduleManager = new ModuleManagerImpl(this);
 		this.moduleManager.registerLoader(JavaModuleLoader.class);
-//		this.moduleManager.registerCustomizer((module) -> {
-//			Module mod = module.getClass().getModule();
-//			
-//			ModuleReference ref = mod.getLayer().configuration().modules().stream()
-//					.filter(rm -> rm.name().equals(mod.getName()))
-//					.map(ResolvedModule::reference)
-//					.findFirst()
-//					.get();
-//			
-//			Set<Opens> opens = mod.getDescriptor().opens();
-//			
-//			try {
-//				ModuleReader mr = ref.open();
-//			} catch (IOException e) {
-//				e.printStackTrace();
-//			}
-//			
-//			//TODO Do the Hibernate Conf thing
-//		});
 		this.moduleManager.registerCustomizer(module -> {
 			if(NightWebCoreImpl.this.sessionFactory != null) {
 				throw new IllegalStateException("Module can not be loaded and configured after startup.");
@@ -275,13 +265,16 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 			appService.save(data);
 		}
 		
+		this.templateManager = new TemplateManagerImpl(NightWeb.TEMPLATES_DIR, NightWeb.LANG_DIR);
+		
 		//Doing setup things
 		LOGGER.info("Creating default settings & permissions if not already existing...");
 		this.createDefaultSettings(data.getModuleData());
 		this.createDefaultPermissions(data.getModuleData());
 		this.createDefaultGroups(data);
+		this.registerEvents();
 		
-		this.templateManager = new TemplateManagerImpl(NightWeb.TEMPLATES_DIR, NightWeb.LANG_DIR);
+		//Set default language as shared variable for template function lang()
 		try {
 			this.templateManager.setSharedVariable("defaultLanguage", this.serviceMan.getService(SettingService.class).getByKey("defaultLanguage").getValue());
 		} catch (TemplateModelException e) {
@@ -302,21 +295,45 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	}
 
 	private void createDefaultSettings(ModuleData data) {
-		Setting defaultLang = new Setting("defaultLanguage", "en", Type.STRING, data);
-		Setting dG = new Setting("defaultGroup", "-1", Type.NUMBER, data);
-		Setting gG = new Setting("guestGroup", "-1", Type.NUMBER, data);
-		Setting regEnabled = new Setting("registrationEnabled", Boolean.TRUE.toString(), Type.FLAG, data);
-		Setting loginEnabled = new Setting("loginEnabled", Boolean.TRUE.toString(), Type.FLAG, data);
-		Setting activationType = new Setting("activationType", ActivationType.ACTIVATION.toString(), Type.STRING, data);
+		SettingService serv = this.serviceMan.getService(SettingService.class);
 		
-		this.serviceMan.getService(SettingService.class).create(defaultLang, dG, gG, regEnabled, loginEnabled, activationType);
+		//General settings
+		SystemSetting pageTitle = new SystemSetting("pageTitle", "NightWeb", Type.STRING, "general", data);
+		SystemSetting pageDesc = new SystemSetting("pageDescription", "", Type.STRING, "general", data);
+		SystemSetting metaKeywords = new SystemSetting("metaKeywords", "", Type.STRING, "general", data);
+		SystemSetting metaDesc = new SystemSetting("metaDescription", "", Type.STRING, "general", data);
+		
+		SystemSetting defaultLang = new SystemSetting("defaultLanguage", "en", Type.SELECTION, "general", new String[] {"en"}, data);
+		
+		//Developer
+		SystemSetting dG = new SystemSetting("defaultGroup", "2", Type.NUMBER, "developer", data);
+		SystemSetting gG = new SystemSetting("guestGroup", "1", Type.NUMBER, "developer", data);
+		
+		//User
+		SystemSetting regEnabled = new SystemSetting("registrationEnabled", Boolean.TRUE.toString(), Type.FLAG, "user.register", data);
+		SystemSetting loginEnabled = new SystemSetting("loginEnabled", Boolean.TRUE.toString(), Type.FLAG, "user", data);
+		SystemSetting activationType = new SystemSetting("activationType", ActivationType.ACTIVATION.toString(), Type.RADIOBUTTON, "user.register", 
+				Arrays.stream(ActivationType.class.getEnumConstants()).map(Enum::name).toArray(String[]::new), data);
+		
+		serv.create(pageTitle, pageDesc, metaKeywords, metaDesc, defaultLang, dG, gG, regEnabled, loginEnabled, activationType);
+		
+		SystemSetting defaultLangSET = serv.getByKey("defaultLanguage");
+		LOGGER.debug("Null check: " + (this.templateManager.getLanguageManager().getAvailableLanguages() != null));
+		LOGGER.debug("Null check: " + (defaultLangSET != null));
+		defaultLangSET.setEnumValues(this.templateManager.getLanguageManager().getAvailableLanguages());
+		
+		serv.save(defaultLangSET);
 	}
 	
 	private void createDefaultPermissions(ModuleData data) {
 		DefaultPermission bypassDisabledLogin = new DefaultPermission("nightweb.admin.canBypassDisabledLogin", Tribool.NEUTRAL, data);
 		DefaultPermission canUseACP = new DefaultPermission("nightweb.admin.canUseACP", Tribool.NEUTRAL, data);
+		DefaultPermission canEditModules = new DefaultPermission("nightweb.admin.canManageModules", Tribool.NEUTRAL, data);
+		DefaultPermission canInstallModules = new DefaultPermission("nightweb.admin.canInstallModules", Tribool.NEUTRAL, data);
+		DefaultPermission canUninstallModules = new DefaultPermission("nightweb.admin.canUninstallModules", Tribool.NEUTRAL, data);
+		DefaultPermission canManageSettings = new DefaultPermission("nightweb.admin.canManageSettings", Tribool.NEUTRAL, data);
 		
-		this.serviceMan.getService(PermissionService.class).create(bypassDisabledLogin, canUseACP);
+		this.serviceMan.getService(PermissionService.class).create(bypassDisabledLogin, canUseACP, canEditModules, canInstallModules, canUninstallModules, canManageSettings);
 	}
 	
 	private void createDefaultGroups(ApplicationData data) {
@@ -341,6 +358,25 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		administrators.setStaffGroup(true);
 		
 		this.serviceMan.getService(GroupService.class).create(guestGroup, registered, administrators);
+	}
+	
+
+	/**
+	 * 
+	 */
+	private void registerEvents() {
+		this.eventManager.registerListener(TemplatePreprocessEvent.class, event -> {
+			TemplatePreprocessEvent tmpEvent = (TemplatePreprocessEvent) event;
+			
+			SettingService setserv = this.serviceMan.getService(SettingService.class);
+			
+			SystemSetting pageTitle = setserv.getByKey("pageTitle");
+			SystemSetting pageDesc = setserv.getByKey("pageDescription");
+			SystemSetting metaKeywords = setserv.getByKey("metaKeywords");
+			SystemSetting metaDesc = setserv.getByKey("metaDescription");
+			
+			tmpEvent.getTemplateBuilder().assign("title", pageTitle.getValue()).assign("pageDescription", pageDesc).assign("metaKeywords", metaKeywords).assign("metaDescription", metaDesc);
+		});
 	}
 
 	/**
@@ -389,6 +425,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		ctx.registerServlet(AdminModuleInstallListServlet.class, "/admin/install-modules");
 		ctx.registerServlet(AdminModuleInstallServlet.class, "/admin/install");
 		ctx.registerServlet(AdminModuleUninstallServlet.class, "/admin/uninstall/*");
+		ctx.registerServlet(AdminSettingsServlet.class, "/admin/settings/*");
 		
 		//Test
 		ctx.registerServlet(TestServlet.class, "/test");
@@ -446,6 +483,11 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	public TemplateManager getTemplateManager() {
 		return this.templateManager;
 	}
+	
+	@Override
+	public EventManager getEventManager() {
+		return this.eventManager;
+	}
 
 	@Override
 	public String getMailService() {
@@ -468,18 +510,8 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	}
 
 	@Override
-	public List<WebSession> getSessions() {
-		return this.sessions;
-	}
-	
-	@Override
-	public void addSession(WebSession session) {
-		this.sessions.add(session);
-	}
-	
-	@Override
-	public void removeSession(WebSession session) {
-		this.sessions.remove(session);
+	public List<HttpSession> getSessions() {
+		return this.server.getSessions();
 	}
 	
 	public ModuleManager getModuleManager() {

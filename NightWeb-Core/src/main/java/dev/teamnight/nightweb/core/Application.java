@@ -8,8 +8,6 @@ import javax.servlet.http.HttpServlet;
 import org.hibernate.Session;
 
 public abstract class Application implements NightModule {
-
-	// TODO Implement class
 	
 	private ApplicationContext context;
 	private boolean enabled;
@@ -37,15 +35,17 @@ public abstract class Application implements NightModule {
 
 	@Override
 	public void addServlet(Class<? extends HttpServlet> servlet) {
+		this.context.registerServlet(servlet);
 	}
 
 	@Override
-	public void addServlet(Class<? extends HttpServlet> servlet, String pathInfo) {
+	public void addServlet(Class<? extends HttpServlet> servlet, String pathSpec) {
+		this.context.registerServlet(servlet, pathSpec);
 	}
 
 	@Override
 	public Session getDatabase() {
-		return null;
+		return this.context.getDatabaseSession();
 	}
 
 	@Override

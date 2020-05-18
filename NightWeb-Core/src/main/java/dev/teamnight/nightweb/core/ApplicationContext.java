@@ -17,8 +17,21 @@ public interface ApplicationContext extends Context {
 	 */
 	public SessionFactory getSessionFactory();
 	
+	/**
+	 * Registers a servlet with the specified context in order to associate a servlet holder with a context
+	 * @param servlet
+	 * @param pathSpec
+	 * @param ctx
+	 */
 	public void registerServlet(Class<? extends HttpServlet> servlet, String pathSpec, Context ctx);
 	
+	/**
+	 * Registers a servlet holder
+	 * 
+	 * <p>WARNING: Only NightJettyServletHolder supports the session mechanic, if you need this, copy the source files.</p>
+	 * @param holder
+	 * @param pathSpec
+	 */
 	public void registerServletHolder(ServletHolder holder, String pathSpec);
 	
 }

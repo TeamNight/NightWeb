@@ -17,9 +17,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import dev.teamnight.nightweb.core.AdminSession;
 import dev.teamnight.nightweb.core.StringUtil;
-import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
 
 /**
@@ -51,9 +49,7 @@ public class AdminAuthenticationFilter implements Filter {
 			HttpServletRequest req = (HttpServletRequest) request;
 			HttpServletResponse resp = (HttpServletResponse) response;
 			
-			AdminSession session = WebSession.getSession(req, AdminSession.class);
-			
-			if(session == null || !session.isLoggedIn()) {
+			if(req.getSession().getAttribute("dev.teamnight.nightweb.core.session.adminSession") == null) {
 				resp.sendRedirect(StringUtil.filterURL(this.data.getContextPath() + "/admin/login"));
 				return;
 			}

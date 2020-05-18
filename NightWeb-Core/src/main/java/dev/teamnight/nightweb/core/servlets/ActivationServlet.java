@@ -12,9 +12,9 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.validator.routines.EmailValidator;
 
+import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.PathParameters;
-import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.entities.ActivationType;
 import dev.teamnight.nightweb.core.entities.Setting;
 import dev.teamnight.nightweb.core.entities.User;
@@ -31,13 +31,12 @@ public class ActivationServlet extends HttpServlet {
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		WebSession session = WebSession.getSession(req);
+		Context ctx = Context.get(req);
+		Authenticator auth = ctx.getAuthenticator(req.getSession());
 		
-		if(session.isLoggedIn()) {
+		if(auth.isAuthenticated()) {
 			resp.sendRedirect("/");
 		}
-		
-		Context ctx = Context.get(req);
 		
 		//Check if activationType is ACTIVATION
 		SettingService setServ = ctx.getServiceManager().getService(SettingService.class);

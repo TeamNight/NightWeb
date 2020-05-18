@@ -3,10 +3,23 @@
  */
 package dev.teamnight.nightweb.core.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
+
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpSession;
+import javax.servlet.http.HttpSessionEvent;
+import javax.servlet.http.HttpSessionIdListener;
+import javax.servlet.http.HttpSessionListener;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.CustomRequestLog;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.SecureRequestCustomizer;
@@ -16,38 +29,48 @@ import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.SecuredRedirectHandler;
+import org.eclipse.jetty.server.session.DefaultSessionIdManager;
+import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletMapping;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.hibernate.SessionFactory;
 
 import dev.teamnight.nightweb.core.Application;
 import dev.teamnight.nightweb.core.ApplicationContext;
+import dev.teamnight.nightweb.core.AuthenticatorFactory;
 import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.Server;
+import dev.teamnight.nightweb.core.StringUtil;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
 import dev.teamnight.nightweb.core.entities.XmlConfiguration;
 import dev.teamnight.nightweb.core.service.ApplicationService;
 
-public class JettyServer implements Server {
+public class JettyServer implements Server, HttpSessionListener, HttpSessionIdListener {
 
 	private static final String RequestLogFormat = "%{client}a - %u \"%r\" %s %O \"%{Referer}i\" \"%{User-Agent}i\"";
 	private static Logger LOGGER = LogManager.getLogger();
 	
 	private org.eclipse.jetty.server.Server server;
+	private List<String> sessionIds = new ArrayList<String>();
+	private ReentrantLock sessionIdsLock = new ReentrantLock();
 	
 	private ContextHandlerCollection servletContextHandlers = new ContextHandlerCollection();
 	
 	private XmlConfiguration conf;
 	
 	private NightWebCore core;
-
+	private AuthenticatorFactory authFactory;
+	
 	private SessionFactory sessionFactory;
 	
 	public JettyServer(NightWebCore core, XmlConfiguration conf) {
 		this.core = core;
 		this.conf = conf;
+		
+		this.authFactory = new AuthenticatorFactory(SessionAuthenticator.class);
 		
 		//Thread pool for connectors
 		QueuedThreadPool threadPool = new QueuedThreadPool(conf.getMaxThreads(), conf.getMinThreads());
@@ -72,7 +95,7 @@ public class JettyServer implements Server {
 		
 		//SSL Support
 		if(this.isSSLEnabled()) {
-			LOGGER.info("Using SSL supprto");
+			LOGGER.info("Using SSL support");
 			HttpConfiguration httpsConf = new HttpConfiguration(httpConf);
 			httpsConf.addCustomizer(new SecureRequestCustomizer());
 			
@@ -101,6 +124,7 @@ public class JettyServer implements Server {
 		
 		server.setHandler(handlers);
 		server.setRequestLog(new CustomRequestLog(new Log4jRequestLogWriter(JettyServer.class), JettyServer.RequestLogFormat));
+		server.setSessionIdManager(new DefaultSessionIdManager(server));
 	}
 	
 	public boolean isSSLEnabled() {
@@ -216,12 +240,40 @@ public class JettyServer implements Server {
 		handler.setContextPath(data.getContextPath());
 		handler.setErrorHandler(this.server.getErrorHandler());
 		
-		ApplicationContext ctx = new JettyApplicationContext(handler, this.sessionFactory, this.core.getServiceManager(), this.core.getTemplateManager());
+		SessionHandler sessions = new SessionHandler();
+		sessions.setServer(this.server);
+		sessions.setSessionIdManager(this.server.getSessionIdManager());
+		sessions.addEventListener(this);
+		handler.setSessionHandler(sessions);
+		
+		ApplicationContext ctx = new JettyApplicationContext(handler, this.sessionFactory, this.authFactory, this.core.getServiceManager(), this.core.getTemplateManager());
 		ctx.setModule(app);
 		
 		this.servletContextHandlers.addHandler(handler);
 		
 		return ctx;
+	}
+	
+	@Override
+	public String getServletURL(Class<? extends HttpServlet> servletClass) {
+		String url = null;
+		
+		for(Handler handler : this.servletContextHandlers.getHandlers()) {
+			if(!(handler instanceof ServletContextHandler)) {
+				throw new IllegalArgumentException("Unallowed handler in ContextHandlerCollection");
+			}
+			ServletContextHandler ctxHandler = (ServletContextHandler) handler;
+			
+			for(ServletMapping map : ctxHandler.getServletHandler().getServletMappings()) {
+				if(map.getServletName().startsWith(servletClass.getName())) {
+					url = map.getPathSpecs()[0].replace("/*", "");
+					
+					url = StringUtil.filterURL(ctxHandler.getContextPath() + url);
+				}
+			}
+		}
+		
+		return url;
 	}
 	
 	public org.eclipse.jetty.server.Server getJettyServer() {
@@ -231,6 +283,71 @@ public class JettyServer implements Server {
 	@Override
 	public void setSessionFactory(SessionFactory factory) {
 		this.sessionFactory = factory;
+	}
+
+	@Override
+	public List<HttpSession> getSessions() {
+		//TODO: same SessionCache for all contexts
+		return this.sessionIds.stream().map(
+				id -> this.server.getSessionIdManager().getSessionHandlers().stream()
+						.map(handler -> handler.getSession(id))
+						.filter(session -> session != null)
+						.findFirst()
+						.orElse(null)
+				).collect(Collectors.toUnmodifiableList());
+	}
+
+	@Override
+	public void sessionIdChanged(HttpSessionEvent event, String oldSessionId) {
+		boolean locked = false;
+		try {
+			locked = this.sessionIdsLock.tryLock(2, TimeUnit.SECONDS);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		if(!locked) {
+			throw new IllegalStateException("Unable to change session id in list within 2 seconds.");
+		}
+		
+		this.sessionIds.remove(oldSessionId);
+		this.sessionIds.add(event.getSession().getId());
+		
+		this.sessionIdsLock.unlock();
+	}
+
+	@Override
+	public void sessionCreated(HttpSessionEvent se) {
+		boolean locked = false;
+		try {
+			locked = this.sessionIdsLock.tryLock(2, TimeUnit.SECONDS);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		if(!locked) {
+			throw new IllegalStateException("Unable to change session id in list within 2 seconds.");
+		}
+		
+		this.sessionIds.add(se.getSession().getId());
+		this.sessionIdsLock.unlock();
+	}
+
+	@Override
+	public void sessionDestroyed(HttpSessionEvent se) {
+		boolean locked = false;
+		try {
+			locked = this.sessionIdsLock.tryLock(2, TimeUnit.SECONDS);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		if(!locked) {
+			throw new IllegalStateException("Unable to change session id in list within 2 seconds.");
+		}
+		
+		this.sessionIds.remove(se.getSession().getId());
+		this.sessionIdsLock.unlock();
 	}
 
 }

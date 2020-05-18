@@ -12,11 +12,10 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.validator.routines.LongValidator;
 
-import dev.teamnight.nightweb.core.AdminSession;
+import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.PathParameters;
 import dev.teamnight.nightweb.core.StringUtil;
-import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.annotations.AdminServlet;
 import dev.teamnight.nightweb.core.entities.ModuleData;
 import dev.teamnight.nightweb.core.service.ModuleService;
@@ -33,14 +32,19 @@ public class AdminModuleUninstallServlet extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		Context ctx = Context.get(req);
-		AdminSession session = WebSession.getSession(req, AdminSession.class);
+		Authenticator auth = ctx.getAuthenticator(req.getSession());
+		
+		if(!auth.getUser().hasPermission("nightweb.admin.canUninstallModules")) {
+			ctx.getTemplate("admin/permissionError.tpl").send(resp);
+			return;
+		}
 		
 		String sId = new PathParameters(req.getPathInfo()).getParameter(0);
 		
 		LongValidator val = LongValidator.getInstance();
 		if(!val.isValid(sId)) {
 			ctx.getTemplate("admin/deleteModule.tpl")
-				.assign("session", session)
+				.assign("currentUser", auth.getUser())
 				.assign("failed", "invalidIDError")
 				.send(resp);
 			return;
@@ -53,7 +57,15 @@ public class AdminModuleUninstallServlet extends HttpServlet {
 		
 		if(data == null) {
 			ctx.getTemplate("admin/deleteModule.tpl")
-				.assign("session", session)
+				.assign("session", auth.getUser())
+				.assign("failed", "unknownModuleError")
+				.send(resp);
+			return;
+		}
+		
+		if(data.getIdentifier().equalsIgnoreCase("dev.teamnight.nightweb.core")) {
+			ctx.getTemplate("admin/deleteModule.tpl")
+				.assign("session", auth.getUser())
 				.assign("failed", "unknownModuleError")
 				.send(resp);
 			return;

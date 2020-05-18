@@ -55,11 +55,6 @@
 									<artifactId>cdi-api</artifactId>
 									<version>2.0</version>
 								</artifactItem>
-								<artifactItem>
-									<groupId>net.bytebuddy</groupId>
-									<artifactId>byte-buddy</artifactId>
-									<version>1.10.7</version>
-								</artifactItem>
 							</artifactItems>
 						</configuration>
 					</execution>

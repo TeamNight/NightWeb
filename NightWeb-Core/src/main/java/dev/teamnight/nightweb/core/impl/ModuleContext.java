@@ -5,15 +5,17 @@ package dev.teamnight.nightweb.core.impl;
 
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.Session;
 
 import dev.teamnight.nightweb.core.ApplicationContext;
+import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightModule;
-import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 import dev.teamnight.nightweb.core.template.TemplateBuilder;
 import dev.teamnight.nightweb.core.template.TemplateManager;
@@ -22,7 +24,6 @@ public class ModuleContext implements Context {
 
 	private ApplicationContext appContext;
 	private NightModule module;
-	private Class<? extends WebSession> sessionType;
 	
 	/**
 	 * @param appContext
@@ -34,6 +35,11 @@ public class ModuleContext implements Context {
 
 	protected ApplicationContext getApplicationContext() {
 		return this.appContext;
+	}
+	
+	@Override
+	public String getModuleIdentifier() {
+		return this.module.getIdentifier();
 	}
 
 	@Override
@@ -86,30 +92,20 @@ public class ModuleContext implements Context {
 	public TemplateManager getTemplateManager() {
 		return this.appContext.getTemplateManager();
 	}
-
-	@Override
-	public Class<? extends WebSession> getSessionType() {
-		return this.sessionType != null ? this.sessionType : WebSession.class;
-	}
 	
 	@Override
-	public void setSessionType(Class<? extends WebSession> sessionType) throws IllegalArgumentException {
-		if(this.sessionType != null) {
-			throw new IllegalArgumentException("Session Type can only be set once");
-		}
-		
-		try {
-			this.sessionType.getConstructor(Context.class);
-		} catch (NoSuchMethodException | SecurityException e) {
-			throw new IllegalArgumentException("Missing public " + this.sessionType.getSimpleName() + "(Context) Constructor", e);
-		}
-		
-		this.sessionType = sessionType;
+	public Authenticator getAuthenticator(HttpSession session) {
+		return this.appContext.getAuthenticator(session);
 	}
 
 	@Override
 	public TemplateBuilder getTemplate(String templatePath) {
 		return this.getTemplateManager().builder(templatePath, this);
+	}
+
+	@Override
+	public Context getParent() {
+		return this.appContext;
 	}
 
 }

@@ -13,6 +13,8 @@ import dev.teamnight.nightweb.core.entities.XmlLanguageMap;
  */
 public interface LanguageManager {
 	
+	public String[] getAvailableLanguages();
+	
 	public void loadLanguages(Path path);
 	
 	public void loadLanguage(Path path);

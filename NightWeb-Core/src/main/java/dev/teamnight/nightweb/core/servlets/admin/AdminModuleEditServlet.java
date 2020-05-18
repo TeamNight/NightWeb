@@ -10,10 +10,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import dev.teamnight.nightweb.core.AdminSession;
+import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.PathParameters;
-import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.annotations.AdminServlet;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
 import dev.teamnight.nightweb.core.entities.ModuleData;
@@ -32,7 +31,12 @@ public class AdminModuleEditServlet extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		Context ctx = Context.get(req);
-		AdminSession session = WebSession.getSession(req, AdminSession.class);
+		Authenticator auth = ctx.getAuthenticator(req.getSession());
+		
+		if(!auth.getUser().hasPermission("nightweb.admin.canManageModules")) {
+			ctx.getTemplate("admin/permissionError.tpl").send(resp);
+			return;
+		}
 		
 		ModuleService mserv = ctx.getServiceManager().getService(ModuleService.class);
 		
@@ -40,7 +44,7 @@ public class AdminModuleEditServlet extends HttpServlet {
 		
 		if(moduleIdentifier == null || moduleIdentifier.isBlank()) {
 			ctx.getTemplate("admin/moduleEdit.tpl")
-				.assign("session", session)
+				.assign("currentUser", auth.getUser())
 				.assign("failed", "unknownModuleError")
 				.send(resp);
 			return;
@@ -50,14 +54,14 @@ public class AdminModuleEditServlet extends HttpServlet {
 		
 		if(data == null) {
 			ctx.getTemplate("admin/moduleEdit.tpl")
-				.assign("session", session)
+				.assign("currentUser", auth.getUser())
 				.assign("failed", "unknownModuleError")
 				.send(resp);
 			return;
 		}
 		
 		ctx.getTemplate("admin/moduleEdit.tpl")
-			.assign("session", session)
+			.assign("currentUser", auth.getUser())
 			.assign("module", data)
 			.assign("appData", ctx.getServiceManager().getService(ApplicationService.class).getByIdentifier(moduleIdentifier))
 			.send(resp);
@@ -66,7 +70,12 @@ public class AdminModuleEditServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		Context ctx = Context.get(req);
-		AdminSession session = WebSession.getSession(req, AdminSession.class);
+		Authenticator auth = ctx.getAuthenticator(req.getSession());
+		
+		if(!auth.getUser().hasPermission("nightweb.admin.canManageModules")) {
+			ctx.getTemplate("admin/permissionError.tpl").send(resp);
+			return;
+		}
 		
 		ModuleService mserv = ctx.getServiceManager().getService(ModuleService.class);
 		
@@ -74,7 +83,7 @@ public class AdminModuleEditServlet extends HttpServlet {
 		
 		if(moduleIdentifier == null || moduleIdentifier.isBlank()) {
 			ctx.getTemplate("admin/moduleEdit.tpl")
-				.assign("session", session)
+				.assign("currentUser", auth.getUser())
 				.assign("failed", "unknownModuleError")
 				.send(resp);
 			return;
@@ -84,7 +93,7 @@ public class AdminModuleEditServlet extends HttpServlet {
 		
 		if(data == null) {
 			ctx.getTemplate("admin/moduleEdit.tpl")
-				.assign("session", session)
+			.assign("currentUser", auth.getUser())
 				.assign("failed", "unknownModuleError")
 				.send(resp);
 			return;
@@ -98,7 +107,7 @@ public class AdminModuleEditServlet extends HttpServlet {
 		if(path != null && appData != null) {
 			if(!path.matches("^^[a-zA-Z0-9/-_.+!]+?\\/+$")) {
 				ctx.getTemplate("admin/moduleEdit.tpl")
-					.assign("session", session)
+					.assign("currentUser", auth.getUser())
 					.assign("module", data)
 					.assign("appData", appData)
 					.assign("pathError", "unallowedPathError")
@@ -119,7 +128,7 @@ public class AdminModuleEditServlet extends HttpServlet {
 		mserv.save(data);
 		
 		ctx.getTemplate("admin/moduleEdit.tpl")
-			.assign("session", session)
+			.assign("currentUser", auth.getUser())
 			.assign("module", mserv.getByIdentifier(moduleIdentifier))
 			.assign("appData", appData)
 			.assign("saved", true)

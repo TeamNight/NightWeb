@@ -15,19 +15,17 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.validator.routines.IntegerValidator;
 
-import dev.teamnight.nightweb.core.AdminSession;
+import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.PathParameters;
-import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.annotations.AdminServlet;
 import dev.teamnight.nightweb.core.entities.ModuleData;
 import dev.teamnight.nightweb.core.impl.NightWebCoreImpl;
 import dev.teamnight.nightweb.core.module.ModuleManager;
 import dev.teamnight.nightweb.core.service.ModuleService;
-
 /**
  * @author Jonas
  *
@@ -40,7 +38,12 @@ public class AdminModuleListServlet extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		Context ctx = Context.get(req);
-		AdminSession session = WebSession.getSession(req, AdminSession.class);
+		Authenticator auth = ctx.getAuthenticator(req.getSession());
+		
+		if(!auth.getUser().hasPermission("nightweb.admin.canManageModules")) {
+			ctx.getTemplate("admin/permissionError.tpl").send(resp);
+			return;
+		}
 		
 		ModuleService mserv = ctx.getServiceManager().getService(ModuleService.class);
 		
@@ -66,7 +69,7 @@ public class AdminModuleListServlet extends HttpServlet {
 		}
 		
 		ctx.getTemplate("admin/moduleList.tpl")
-			.assign("session", session)
+			.assign("currentUser", auth.getUser())
 			.assign("modules", modules)
 			.assign("uninstalledModules", uninstalledModules)
 			.send(resp);

@@ -4,16 +4,12 @@
 package dev.teamnight.nightweb.core.entities;
 
 import javax.persistence.Column;
-import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.Inheritance;
-import javax.persistence.InheritanceType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
+import javax.persistence.MappedSuperclass;
 
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
@@ -22,9 +18,7 @@ import org.hibernate.annotations.OnDeleteAction;
  * @author Jonas
  *
  */
-@Entity
-@Table(name = "settings", uniqueConstraints = @UniqueConstraint(columnNames = {"settingKey"}))
-@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+@MappedSuperclass
 public class Setting {
 
 	@Id
@@ -43,8 +37,14 @@ public class Setting {
 	@Column(nullable = false)
 	private Setting.Type type;	
 	
+	@Column(nullable = false)
+	private String category = "general";
+	
+	@Column(nullable = false)
+	private int showOrder = 0;
+	
 	@Column
-	private String category;
+	private String enumValues;
 	
 	@ManyToOne(optional = false)
 	@OnDelete(action = OnDeleteAction.CASCADE)
@@ -64,6 +64,21 @@ public class Setting {
 		this.value = value;
 		this.defaultValue = value;
 		this.type = type;
+		this.module = module;
+	}
+	
+	/**
+	 * Constructor for a new setting, defaultValue will be the same as value
+	 * @param key
+	 * @param value
+	 * @param type
+	 */
+	public Setting(String key, String value, Setting.Type type, String[] enumValues, ModuleData module) {
+		this.key = key;
+		this.value = value;
+		this.defaultValue = value;
+		this.type = type;
+		this.enumValues = String.join(",", enumValues);
 		this.module = module;
 	}
 	
@@ -149,6 +164,20 @@ public class Setting {
 	public Setting.Type getType() {
 		return type;
 	}
+	
+	/**
+	 * @return the category
+	 */
+	public String getCategory() {
+		return category;
+	}
+	
+	/**
+	 * @return the enumValues
+	 */
+	public String[] getEnumValues() {
+		return enumValues.contains(",") ? enumValues.split(",") : new String[] {enumValues};
+	}
 
 	/**
 	 * @param id the id to set
@@ -184,6 +213,20 @@ public class Setting {
 	public void setType(Setting.Type type) {
 		this.type = type;
 	}
+	
+	/**
+	 * @param category the category to set
+	 */
+	public void setCategory(String category) {
+		this.category = category;
+	}
+	
+	/**
+	 * @param enumValues the enumValues to set
+	 */
+	public void setEnumValues(String[] enumValues) {
+		this.enumValues = String.join(",", enumValues);
+	}
 
 	/**
 	 * @author Jonas
@@ -192,6 +235,9 @@ public class Setting {
 	public enum Type {
 		STRING,
 		NUMBER,
-		FLAG
+		FLAG,
+		RADIOBUTTON,
+		SELECTION,
+		HIDDEN
 	}
 }

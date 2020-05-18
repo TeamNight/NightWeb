@@ -12,8 +12,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.validator.routines.EmailValidator;
 
+import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
-import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.entities.Setting;
 import dev.teamnight.nightweb.core.entities.User;
 import dev.teamnight.nightweb.core.service.SettingService;
@@ -32,13 +32,12 @@ public class LoginServlet extends HttpServlet {
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		WebSession session = WebSession.getSession(req);
+		Context ctx = Context.get(req);
+		Authenticator auth = ctx.getAuthenticator(req.getSession());
 		
-		if(session.isLoggedIn()) {
+		if(auth.isAuthenticated()) {
 			resp.sendRedirect("/");
 		}
-		
-		Context ctx = Context.get(req);
 		
 		//Build the template
 		ctx.getTemplate("login.tpl").send(resp);
@@ -46,13 +45,12 @@ public class LoginServlet extends HttpServlet {
 	
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		WebSession session = WebSession.getSession(req);
+		Context ctx = Context.get(req);
+		Authenticator auth = ctx.getAuthenticator(req.getSession());
 		
-		if(session.isLoggedIn()) {
+		if(auth.isAuthenticated()) {
 			resp.sendRedirect("/");
 		}
-		
-		Context ctx = Context.get(req);
 		
 		//Check parameters
 		String emailOrUsername = req.getParameter("emailOrUsername");
@@ -94,13 +92,20 @@ public class LoginServlet extends HttpServlet {
 			return;
 		}
 		
+		if(user.isDisabled()) {
+			ctx.getTemplate("login.tpl").assign("failed", "userDisabledError").send(resp);
+			return;
+		}
+		
+		
 		//Check user password
-		if(!user.getPassword().equals(user.createHash(password))) {
+		auth.setUser(user);
+		
+		if(!auth.authenticate(password)) {
 			ctx.getTemplate("login.tpl").assign("failed", "invalidPasswordError").send(resp);
 			return;
 		}
 		
-		session.setUser(user);
 		resp.sendRedirect("/");
 		
 		//TODO add logging for login

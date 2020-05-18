@@ -12,14 +12,13 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import dev.teamnight.nightweb.core.AdminSession;
 import dev.teamnight.nightweb.core.Application;
+import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.StringUtil;
-import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.annotations.AdminServlet;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
 import dev.teamnight.nightweb.core.entities.ModuleData;
@@ -41,7 +40,12 @@ public class AdminModuleInstallServlet extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		Context ctx = Context.get(req);
-		AdminSession session = WebSession.getSession(req, AdminSession.class);
+		Authenticator auth = ctx.getAuthenticator(req.getSession());
+		
+		if(!auth.getUser().hasPermission("nightweb.admin.canInstallModules")) {
+			ctx.getTemplate("admin/permissionError.tpl").send(resp);
+			return;
+		}
 		
 		ModuleService mserv = ctx.getServiceManager().getService(ModuleService.class);
 		
@@ -50,7 +54,7 @@ public class AdminModuleInstallServlet extends HttpServlet {
 		
 		if(param == null) {
 			ctx.getTemplate("admin/moduleInstall.tpl")
-				.assign("session", session)
+				.assign("currentUser", auth.getUser())
 				.assign("failed", "unallowedParamError")
 				.assign("errorReason", "null")
 				.send(resp);
@@ -67,7 +71,7 @@ public class AdminModuleInstallServlet extends HttpServlet {
 		
 		if(moduleIdentifier.isBlank()) {
 			ctx.getTemplate("admin/moduleInstall.tpl")
-				.assign("session", session)
+				.assign("currentUser", auth.getUser())
 				.assign("failed", "unallowedParamError")
 				.assign("errorReason", "blank")
 				.send(resp);
@@ -76,7 +80,7 @@ public class AdminModuleInstallServlet extends HttpServlet {
 		
 		if(mserv.getByIdentifier(moduleIdentifier) != null) {
 			ctx.getTemplate("admin/moduleInstall.tpl")
-				.assign("session", session)
+				.assign("currentUser", auth.getUser())
 				.assign("failed", "alreadyInstalledError")
 				.send(resp);
 			return;
@@ -88,7 +92,7 @@ public class AdminModuleInstallServlet extends HttpServlet {
 		
 		if(module == null) {
 			ctx.getTemplate("admin/moduleInstall.tpl")
-				.assign("session", session)
+				.assign("currentUser", auth.getUser())
 				.assign("failed", "unknownModuleError")
 				.send(resp);
 			return;
@@ -98,7 +102,7 @@ public class AdminModuleInstallServlet extends HttpServlet {
 		
 		if(module instanceof Application) {
 			ctx.getTemplate("admin/moduleInstall.tpl")
-				.assign("session", session)
+				.assign("currentUser", auth.getUser())
 				.assign("module", file)
 				.assign("moduleIdentifiers", param)
 				.send(resp);
@@ -115,7 +119,12 @@ public class AdminModuleInstallServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		Context ctx = Context.get(req);
-		AdminSession session = WebSession.getSession(req, AdminSession.class);
+		Authenticator auth = ctx.getAuthenticator(req.getSession());
+		
+		if(!auth.getUser().hasPermission("nightweb.admin.canInstallModules")) {
+			ctx.getTemplate("admin/permissionError.tpl").send(resp);
+			return;
+		}
 		
 		ModuleService mserv = ctx.getServiceManager().getService(ModuleService.class);
 		ModuleManager manager = this.getModuleManager();
@@ -125,7 +134,7 @@ public class AdminModuleInstallServlet extends HttpServlet {
 		
 		if(param == null) {
 			ctx.getTemplate("admin/moduleInstall.tpl")
-				.assign("session", session)
+				.assign("currentUser", auth.getUser())
 				.assign("failed", "unallowedParamError")
 				.assign("errorReason", "null")
 				.send(resp);
@@ -142,7 +151,7 @@ public class AdminModuleInstallServlet extends HttpServlet {
 		
 		if(moduleIdentifier.isBlank()) {
 			ctx.getTemplate("admin/moduleInstall.tpl")
-				.assign("session", session)
+				.assign("currentUser", auth.getUser())
 				.assign("failed", "unallowedParamError")
 				.assign("errorReason", "blank")
 				.send(resp);
@@ -154,7 +163,7 @@ public class AdminModuleInstallServlet extends HttpServlet {
 		
 		if(data == null) {
 			ctx.getTemplate("admin/moduleInstall.tpl")
-				.assign("session", session)
+				.assign("currentUser", auth.getUser())
 				.assign("failed", "unknownModuleError")
 				.send(resp);
 			return;
@@ -164,7 +173,7 @@ public class AdminModuleInstallServlet extends HttpServlet {
 		
 		if(!contextPath.matches("^^[a-zA-Z0-9/-_.+!]+?\\/+$")) {
 			ctx.getTemplate("admin/moduleInstall.tpl")
-				.assign("session", session)
+				.assign("currentUser", auth.getUser())
 				.assign("module", file)
 				.assign("moduleIdentifiers", param)
 				.assign("failed", "unallowedPathError")
@@ -183,7 +192,7 @@ public class AdminModuleInstallServlet extends HttpServlet {
 		
 		if(aserv.getByIdentifier(moduleIdentifier) != null) {
 			ctx.getTemplate("admin/moduleInstall.tpl")
-				.assign("session", session)
+				.assign("currentUser", auth.getUser())
 				.assign("failed", "alreadyInstalledError")
 				.send(resp);
 			return;

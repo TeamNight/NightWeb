@@ -5,6 +5,8 @@ package dev.teamnight.nightweb.core;
 
 import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 
 import org.apache.logging.log4j.Logger;
 import org.hibernate.Session;
@@ -15,6 +17,16 @@ import dev.teamnight.nightweb.core.template.TemplateManager;
 
 public interface Context {
 	
+	/**
+	 * @return the identifier of the module associated with this context
+	 */
+	public String getModuleIdentifier();
+	
+	/**
+	 * Returns the parent context or if it is the root context, the root context
+	 * @return
+	 */
+	public Context getParent();
 	/**
 	 * Registers a servlet in the handler of the ApplicationContext.
 	 * Modules do not get an own ContextHandler.
@@ -86,24 +98,10 @@ public interface Context {
 	public void setModule(NightModule module);
 	
 	/**
-	 * Returns the specified session type.
-	 * 
-	 * @see Context#setSessionType(Class)
-	 * 
-	 * @return Class<? extends WebSession> the type of session objects
+	 * @param HttpSession the Session of the Request
+	 * @return {@link dev.teamnight.nightweb.core.Authenticator} the Authenticator for this context and the session provided
 	 */
-	public Class<? extends WebSession> getSessionType();
-	
-	/**
-	 * Sets the session type that should be used for the specific module.
-	 * The module can extend the WebSession object in order to save variables
-	 * specific for a session of a user logged in.
-	 * 
-	 * <p>Requires a public constructor with Context as the only parameter.<p>
-	 * 
-	 * @param  Class<? extends WebSession> the type of session objects
-	 */
-	public void setSessionType(Class<? extends WebSession> sessionType);
+	public Authenticator getAuthenticator(HttpSession session);
 	
 	/**
 	 * Gets the context from a ServletRequest through one of its attributes,

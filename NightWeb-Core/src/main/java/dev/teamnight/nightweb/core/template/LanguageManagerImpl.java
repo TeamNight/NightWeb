@@ -58,6 +58,14 @@ public class LanguageManagerImpl implements LanguageManager {
 			LOGGER.error("Error occured while reading language directory: " + e.getMessage());
 			e.printStackTrace();
 		}
+		
+		this.languages.forEach((string, map) -> {
+			LOGGER.debug("Language contents for " + string);
+			
+			map.getMap().forEach((key, lang) -> {
+				LOGGER.debug(key + ": " + lang);
+			});
+		});
 	}
 
 	@Override
@@ -77,6 +85,7 @@ public class LanguageManagerImpl implements LanguageManager {
 			} else {
 				this.languages.put(map.getLanguageCode(), map);
 			}
+			
 			LOGGER.info("Loaded language >> " + map.getLanguageCode() + "_" + map.getLocalizedName());
 		} catch (JAXBException e) {
 			LOGGER.error("Unable to load language \"" + path + "\": " + e.getMessage() + "(" + e.getErrorCode() + ")");
@@ -102,6 +111,11 @@ public class LanguageManagerImpl implements LanguageManager {
 	@Override
 	public void removeLanguageMap(XmlLanguageMap map) {
 		this.languages.remove(map.getLanguageCode());
+	}
+
+	@Override
+	public String[] getAvailableLanguages() {
+		return this.languages.keySet().toArray(new String[0]);
 	}
 
 }

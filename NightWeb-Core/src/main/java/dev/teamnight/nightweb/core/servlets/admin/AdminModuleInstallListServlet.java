@@ -13,13 +13,12 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import dev.teamnight.nightweb.core.AdminSession;
+import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.StringUtil;
-import dev.teamnight.nightweb.core.WebSession;
 import dev.teamnight.nightweb.core.annotations.AdminServlet;
 import dev.teamnight.nightweb.core.entities.ModuleMetaFile;
 import dev.teamnight.nightweb.core.impl.NightWebCoreImpl;
@@ -37,7 +36,12 @@ public class AdminModuleInstallListServlet extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		Context ctx = Context.get(req);
-		AdminSession session = WebSession.getSession(req, AdminSession.class);
+		Authenticator auth = ctx.getAuthenticator(req.getSession());
+		
+		if(!auth.getUser().hasPermission("nightweb.admin.canInstallModules")) {
+			ctx.getTemplate("admin/permissionError.tpl").send(resp);
+			return;
+		}
 		
 		ModuleManager moduleMan = this.getModuleManager();
 		List<NightModule> uninstalledModules = null;
@@ -49,7 +53,7 @@ public class AdminModuleInstallListServlet extends HttpServlet {
 		List<ModuleMetaFile> uninstalledMetaFiles = uninstalledModules.stream().map(module -> moduleMan.getMeta(module.getIdentifier())).collect(Collectors.toList());
 		
 		ctx.getTemplate("admin/moduleInstallList.tpl")
-			.assign("session", session)
+			.assign("currentUser", auth.getUser())
 			.assign("uninstalledModules", uninstalledMetaFiles)
 			.send(resp);
 	}
@@ -57,7 +61,12 @@ public class AdminModuleInstallListServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		Context ctx = Context.get(req);
-		AdminSession session = WebSession.getSession(req, AdminSession.class);
+		Authenticator auth = ctx.getAuthenticator(req.getSession());
+		
+		if(!auth.getUser().hasPermission("nightweb.admin.canInstallModules")) {
+			ctx.getTemplate("admin/permissionError.tpl").send(resp);
+			return;
+		}
 		
 		ModuleManager moduleMan = this.getModuleManager();
 		List<NightModule> uninstalledModules = null;
@@ -73,7 +82,7 @@ public class AdminModuleInstallListServlet extends HttpServlet {
 		for(String param : installParam) {
 			if(!param.matches("^([a-zA-Z0-9_$]+\\.{0,1})+[a-zA-Z0-9_$]+$")) {
 				ctx.getTemplate("admin/moduleInstallList.tpl")
-					.assign("session", session)
+					.assign("currentUser", auth.getUser())
 					.assign("uninstalledModules", uninstalledMetaFiles)
 					.assign("failed", "unallowedParamError")
 					.send(resp);

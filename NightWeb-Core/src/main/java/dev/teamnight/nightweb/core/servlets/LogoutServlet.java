@@ -10,7 +10,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import dev.teamnight.nightweb.core.WebSession;
+import dev.teamnight.nightweb.core.Authenticator;
+import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.annotations.Authenticated;
 
 /**
@@ -27,8 +28,13 @@ public class LogoutServlet extends HttpServlet {
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		WebSession session = WebSession.getSession(req);
-		session.flush();
+		Authenticator auth = Context.get(req).getAuthenticator(req.getSession());
+		
+		if(auth.isAuthenticated()) {
+			auth.invalidate();
+		}
+		
+		req.getSession().invalidate();
 		
 		resp.sendRedirect("/");
 	}

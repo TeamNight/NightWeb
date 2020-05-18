@@ -5,7 +5,10 @@ package dev.teamnight.nightweb.core;
 
 import java.util.List;
 
+import javax.servlet.http.HttpSession;
+
 import dev.teamnight.nightweb.core.entities.ModuleData;
+import dev.teamnight.nightweb.core.events.EventManager;
 import dev.teamnight.nightweb.core.service.GroupService;
 import dev.teamnight.nightweb.core.service.PermissionService;
 import dev.teamnight.nightweb.core.service.ServiceManager;
@@ -85,6 +88,12 @@ public interface NightWebCore {
 	 */
 	public TemplateManager getTemplateManager();
 	
+	/**
+	 * Returns the event Manager
+	 * @return
+	 */
+	public EventManager getEventManager();
+	
 	// TODO Change to MailService
 	public String getMailService();
 	
@@ -106,21 +115,9 @@ public interface NightWebCore {
 	/**
 	 * Returns a list of all active sessions of the web server
 	 * 
-	 * @return List of {@link dev.teamnight.nightweb.core.WebSession}
+	 * @return List of {@link javax.servlet.http.HttpSession}
 	 */
-	public List<WebSession> getSessions();
-	
-	/**
-	 * Adds a session to the session list
-	 * @param session
-	 */
-	public void addSession(WebSession session);
-	
-	/**
-	 * Removes a session from the session list
-	 * @param session
-	 */
-	public void removeSession(WebSession session);
+	public List<HttpSession> getSessions();
 	
 	/**
 	 * Returns whether the debug mode is enabled

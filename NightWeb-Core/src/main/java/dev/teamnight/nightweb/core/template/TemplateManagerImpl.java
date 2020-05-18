@@ -19,6 +19,7 @@ import com.google.common.cache.CacheBuilder;
 
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightWeb;
+import dev.teamnight.nightweb.core.events.TemplatePreprocessEvent;
 import dev.teamnight.nightweb.core.exceptions.TemplateProcessException;
 import freemarker.core.HTMLOutputFormat;
 import freemarker.template.Configuration;
@@ -74,8 +75,9 @@ public class TemplateManagerImpl implements TemplateManager {
 			adminMenu.setName("adminMenu");
 			adminMenu.setActiveMenu("Dashboard");
 			adminMenu.addLeftItem(1, adminMenu.new Item("Dashboard", "/admin"));
-			adminMenu.addLeftItem(2, adminMenu.new Item("Modules", "/admin/modules"));
-			adminMenu.addLeftItem(3, adminMenu.new Item("Users", "/admin/users"));
+			adminMenu.addLeftItem(2, adminMenu.new Item("Settings", "/admin/settings"));
+			adminMenu.addLeftItem(3, adminMenu.new Item("Modules", "/admin/modules"));
+			adminMenu.addLeftItem(4, adminMenu.new Item("Users", "/admin/users"));
 			
 			this.configuration.setSharedVariable("mainMenu", mainMenu);
 			this.configuration.setSharedVariable("adminMenu", adminMenu);
@@ -103,7 +105,12 @@ public class TemplateManagerImpl implements TemplateManager {
 	@Override
 	public TemplateBuilder builder(Template template) throws TemplateProcessException {
 		try {
-			return new TemplateBuilder(this, template);
+			TemplateBuilder builder = new TemplateBuilder(this, template);
+			
+			//Fire the event
+			NightWeb.getEventManager().fireEvent(new TemplatePreprocessEvent(builder, null));
+			
+			return builder;
 		} catch (IOException e) {
 			throw new TemplateProcessException(e);
 		}
@@ -116,7 +123,12 @@ public class TemplateManagerImpl implements TemplateManager {
 				return this.configuration.getTemplate(templatePath);
 			});
 			
-			return new TemplateBuilder(this, template);
+			TemplateBuilder builder = new TemplateBuilder(this, template);
+			
+			//Fire the event
+			NightWeb.getEventManager().fireEvent(new TemplatePreprocessEvent(builder, null));
+			
+			return builder;
 		} catch (ExecutionException | IOException e) {
 			throw new TemplateProcessException(e);
 		}
@@ -129,7 +141,12 @@ public class TemplateManagerImpl implements TemplateManager {
 				return this.configuration.getTemplate(templatePath);
 			});
 			
-			return new TemplateBuilder(this, template).assign("contextPath", ctx.getContextPath());
+			TemplateBuilder builder = new TemplateBuilder(this, template).assign("contextPath", ctx.getContextPath());
+			
+			//Fire the event
+			NightWeb.getEventManager().fireEvent(new TemplatePreprocessEvent(builder, ctx));
+			
+			return builder;
 		} catch (ExecutionException | IOException e) {
 			throw new TemplateProcessException(e);
 		}

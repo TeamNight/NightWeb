@@ -21,8 +21,6 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.Inheritance;
-import javax.persistence.InheritanceType;
 import javax.persistence.JoinTable;
 import javax.persistence.NamedEntityGraph;
 import javax.persistence.NamedAttributeNode;
@@ -30,9 +28,9 @@ import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
 import javax.persistence.Table;
 
-import dev.teamnight.nightweb.core.entities.Permission.Tribool;
+import org.apache.logging.log4j.LogManager;
 
-import javax.persistence.JoinColumn;
+import dev.teamnight.nightweb.core.entities.Permission.Tribool;
 
 /**
  * @author Jonas
@@ -41,7 +39,6 @@ import javax.persistence.JoinColumn;
 
 @Entity
 @Table(name = "users")
-@Inheritance(strategy = InheritanceType.JOINED)
 @NamedEntityGraph(name = "graph.User", attributeNodes = {
 		@NamedAttributeNode("groups"),
 		@NamedAttributeNode("permissions")
@@ -328,6 +325,9 @@ public class User implements PermissionOwner<UserPermission> {
 				.findFirst()
 				.orElse(null);
 		
+		LogManager.getLogger().debug("UserPermission:null:" + (userPerm == null));
+		LogManager.getLogger().debug("UserPermission:1:" + (userPerm != null ? userPerm.getAsBoolean() : "null"));
+		
 		if(userPerm != null) {
 			return true;
 		}
@@ -337,11 +337,19 @@ public class User implements PermissionOwner<UserPermission> {
 		List<GroupPermission> groupPermissions = new ArrayList<GroupPermission>();
 		
 		this.groups.forEach(group -> {
-			groupPermissions.addAll(group.getPermissions().stream().filter(perm -> perm.getType() == Permission.Type.FLAG).collect(Collectors.toList()));
+			groupPermissions.addAll(
+					group.getPermissions().stream()
+						.filter(perm -> perm.getType() == Permission.Type.FLAG)
+						.filter(perm -> perm.getName().equals(permission))
+						.collect(Collectors.toList())
+					);
 		});
 		
 		for(GroupPermission perm : groupPermissions) {
 			Tribool bool = perm.getAsTribool();
+			
+			LogManager.getLogger().debug("GroupPermission:" + perm.getName() + ":" + perm.getAsBoolean() + ":" + perm.getAsTribool());
+			LogManager.getLogger().debug("allow:1:" + allow);
 			
 			if(bool == Tribool.TRUE) {
 				allow = true;
@@ -349,6 +357,9 @@ public class User implements PermissionOwner<UserPermission> {
 				return false;
 			}
 		}
+		
+		LogManager.getLogger().debug("allow:" + allow);
+		
 		return allow;
 	}
 	

@@ -1,5 +1,7 @@
 package dev.teamnight.nightweb.core.service;
 
+import java.io.Serializable;
+
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
@@ -23,6 +25,28 @@ public class UserService extends AbstractService<User> {
 		user.setPermissions(loaded.getPermissions());
 		
 		session.getTransaction().commit();
+	}
+	
+	@Override
+	public User getOne(Serializable key) {
+		Session session = this.factory().getCurrentSession();
+		session.beginTransaction();
+		
+		User user = session.createQuery("FROM " + this.getType().getCanonicalName() + " U "
+				+ "LEFT JOIN FETCH U.groups G "
+				+ "WHERE U.id = :id",  this.getType())
+				.setParameter("id", key)
+				.uniqueResult();
+		
+		user = session.createQuery("FROM " + this.getType().getCanonicalName() + " U "
+				+ "LEFT JOIN FETCH U.permissions P "
+				+ "WHERE U in :user", this.getType())
+				.setParameter("user", user)
+				.uniqueResult();
+		
+		session.getTransaction().commit();
+		
+		return user;
 	}
 	
 	public User getByUsername(String username) {
