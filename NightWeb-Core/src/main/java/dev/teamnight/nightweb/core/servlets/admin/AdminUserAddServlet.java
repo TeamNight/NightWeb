@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2020 Jonas Müller, Jannik Müller
  */
-package dev.teamnight.nightweb.core.servlets;
+package dev.teamnight.nightweb.core.servlets.admin;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -13,14 +13,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.validator.routines.EmailValidator;
+import org.apache.logging.log4j.LogManager;
 
 import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
+import dev.teamnight.nightweb.core.annotations.AdminServlet;
 import dev.teamnight.nightweb.core.entities.Group;
-import dev.teamnight.nightweb.core.entities.Setting;
 import dev.teamnight.nightweb.core.entities.User;
 import dev.teamnight.nightweb.core.service.GroupService;
-import dev.teamnight.nightweb.core.service.SettingService;
 import dev.teamnight.nightweb.core.service.UserService;
 import dev.teamnight.nightweb.core.util.StringUtil;
 
@@ -28,11 +28,9 @@ import dev.teamnight.nightweb.core.util.StringUtil;
  * @author Jonas
  *
  */
-public class RegistrationServlet extends HttpServlet {
+@AdminServlet
+public class AdminUserAddServlet extends HttpServlet {
 
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
 
 	@Override
@@ -40,47 +38,33 @@ public class RegistrationServlet extends HttpServlet {
 		Context ctx = Context.get(req);
 		Authenticator auth = ctx.getAuthenticator(req.getSession());
 		
-		if(auth.isAuthenticated()) {
-			resp.sendRedirect("/");
-		}
-		
-		//Check if registration is enabled
-		SettingService setServ = ctx.getServiceManager().getService(SettingService.class);
-		Setting regEnabled = setServ.getByKey("registrationEnabled");
-		
-		if(!regEnabled.getAsBoolean()) {
-			ctx.getTemplate("register.tpl").assign("regDisabled", true).send(resp);
+		if(!auth.getUser().hasPermission("nightweb.admin.canCreateUsers")) {
+			ctx.getTemplate("admin/permissionError.tpl").send(resp);
 			return;
 		}
 		
-		//Build the template
-		ctx.getTemplateManager().builder("register.tpl").send(resp);
+		GroupService gserv = ctx.getServiceManager().getService(GroupService.class);
+		List<Group> groups = gserv.getAll();
+		
+		ctx.getTemplate("admin/userCreate.tpl")
+			.assign("currentUser", auth.getUser())
+			.assign("groups", groups)
+			.send(resp);
 	}
 	
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		//Checking session and getting context
 		Context ctx = Context.get(req);
 		Authenticator auth = ctx.getAuthenticator(req.getSession());
 		
-		if(auth.isAuthenticated()) {
-			resp.sendRedirect("/");
-		}
-		
-		//Check if registration is enabled
-		SettingService setServ = ctx.getServiceManager().getService(SettingService.class);
-		Setting regEnabled = setServ.getByKey("registrationEnabled");
-		
-		if(!regEnabled.getAsBoolean()) {
-			ctx.getTemplate("register.tpl").assign("regDisabled", true).send(resp);
+		if(!auth.getUser().hasPermission("nightweb.admin.canCreateUsers")) {
+			ctx.getTemplate("admin/permissionError.tpl").send(resp);
 			return;
 		}
 		
-		//Checking input parameters
-		String email = req.getParameter("email");
 		String username = req.getParameter("username");
+		String email = req.getParameter("email");
 		String password = req.getParameter("password");
-		String password2 = req.getParameter("confirmPassword");
 		
 		boolean fail = false;
 		List<String> errors = new ArrayList<String>();
@@ -102,44 +86,55 @@ public class RegistrationServlet extends HttpServlet {
 			errors.add("passwordInvalidError");
 		}
 		
-		if(!password2.equals(password)) {
-			fail = true;
-			errors.add("passwordMatchError");
-		}
-		
 		if(fail) {
-			ctx.getTemplate("register.tpl").assign("failed", true).assign("errors", errors).send(resp);
+			ctx.getTemplate("admin/userCreate.tpl").assign("failed", true).assign("errors", errors).send(resp);
 			return;
 		}
 		
-		UserService userService = ctx.getServiceManager().getService(UserService.class);
+		UserService userv = ctx.getServiceManager().getService(UserService.class);
 		
-		if(userService.getByUsername(username) != null) {
+		if(userv.getByUsername(username) != null) {
 			errors.add("usernameTakenError");
-			ctx.getTemplate("register.tpl").assign("failed", true).assign("errors", errors).send(resp);
+			ctx.getTemplate("admin/userCreate.tpl").assign("failed", true).assign("errors", errors).send(resp);
 			return;
-		} else if(userService.getByEmail(email) != null) {
+		} 
+		
+		if(userv.getByEmail(email) != null) {
 			errors.add("emailTakenError");
-			ctx.getTemplate("register.tpl").assign("failed", true).assign("errors", errors).send(resp);
+			ctx.getTemplate("admin/userCreate.tpl").assign("failed", true).assign("errors", errors).send(resp);
 			return;
 		}
 		
-		//Set user fields
 		User user = new User(username, email);
 		user.setPassword(user.createHash(password));
 		user.setActivationKey(StringUtil.getRandomString(16));
 		
-		//Set default group
-		long groupId = ctx.getServiceManager().getService(SettingService.class).getByKey("defaultGroup").getAsLong();
+		GroupService gserv = ctx.getServiceManager().getService(GroupService.class);
+		List<Group> groups = gserv.getAll();
 		
-		if(groupId > 0) {
-			Group group = ctx.getServiceManager().getService(GroupService.class).getOne(groupId);
+		for(Group group : groups) {
+			String groupParam = req.getParameter("groupMembership-" + group.getId());
+			
+			if(groupParam == null || groupParam.equalsIgnoreCase("false")) {
+				continue;
+			}
+			
+			if(!auth.getUser().canEdit(group)) {
+				continue;
+			}
+			
+			LogManager.getLogger().debug("Edit:Adding group: " + group);
 			user.addGroup(group);
 		}
 		
-		userService.create(user);
-		ctx.getTemplate("register.tpl").assign("regComplete", true).send(resp);
+		long id = (long) userv.create(user);
 		
-		//TODO send mail
+		ctx.getTemplate("admin/userCreate.tpl")
+			.assign("currentUser", auth.getUser())
+			.assign("groups", groups)
+			.assign("user", user)
+			.assign("userId", id)
+			.assign("created", true)
+			.send(resp);
 	}
 }

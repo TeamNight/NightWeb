@@ -16,7 +16,15 @@ public interface NightModule {
 	 * 
 	 * @param List<Class<?>> classList
 	 */
-	public void configure(List<Class<?>> entityList);
+	public void configureORM(List<Class<?>> entityList);
+	
+	/**
+	 * Gets called during installation process
+	 * 
+	 * @param core
+	 */
+	public void onInstall(NightWebCore core);
+	
 	/**
 	 * This method gets called by NightWeb when it is time for
 	 * the module to shine and set everything up.

@@ -20,7 +20,7 @@ public class ForumApplication extends Application {
 	private static final Logger LOGGER = LogManager.getLogger(ForumApplication.class);
 	
 	@Override
-	public void configure(List<Class<?>> entityList) {
+	public void configureORM(List<Class<?>> entityList) {
 		LOGGER.info("Configuring was called!");
 	}
 

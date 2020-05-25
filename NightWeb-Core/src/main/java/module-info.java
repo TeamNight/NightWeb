@@ -1,10 +1,12 @@
 module dev.teamnight.nightweb.core {
 	exports dev.teamnight.nightweb.core;
 	exports dev.teamnight.nightweb.core.entities;
+	exports dev.teamnight.nightweb.core.events;
 	exports dev.teamnight.nightweb.core.service;
 	exports dev.teamnight.nightweb.core.template;
 	exports dev.teamnight.nightweb.core.exceptions;
 	exports dev.teamnight.nightweb.core.annotations;
+	exports dev.teamnight.nightweb.core.util;
 	
 	//Export to jetty in order for jetty to use the servlets
 	exports dev.teamnight.nightweb.core.servlets 
@@ -14,6 +16,7 @@ module dev.teamnight.nightweb.core {
 	
 	//Hibernate needs deep reflection access in order to instantiate objects
 	opens dev.teamnight.nightweb.core.entities;
+	opens dev.teamnight.nightweb.core.util;
 	opens dev.teamnight.nightweb.core.module to java.xml.bind;
 
 	requires java.naming;
@@ -36,4 +39,5 @@ module dev.teamnight.nightweb.core {
 	requires owasp.java.html.sanitizer;
 	requires java.sql;
 	requires org.eclipse.jetty.http;
+	requires gson;
 }

@@ -31,6 +31,9 @@ public class XmlConfiguration {
 	private int maxThreads;
 	
 	@XmlElement
+	private int templateCacheSize;
+	
+	@XmlElement
 	private String keystoreFile;
 	@XmlElement
 	private String keystorePassword;

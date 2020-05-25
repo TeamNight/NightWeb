@@ -3,6 +3,8 @@
  */
 package dev.teamnight.nightweb.core.impl;
 
+import java.util.Date;
+
 import javax.servlet.http.HttpSession;
 
 import dev.teamnight.nightweb.core.Authenticator;
@@ -33,7 +35,7 @@ public class SessionAuthenticator implements Authenticator {
 			userId = (long) session.getAttribute("dev.teamnight.nightweb.core.session.userId");
 		}
 		
-		if(userId != 0) {
+		if(userId != 0L) {
 			this.user = ctx.getServiceManager().getService(UserService.class).getOne(userId);
 			this.authenticated = true;
 		}
@@ -60,11 +62,21 @@ public class SessionAuthenticator implements Authenticator {
 			return false;
 		}
 		
+		if(user.isBanned()) {
+			this.authenticated = false;
+			return false;
+		}
+		
 		if(user.getPassword().equals(user.createHash(password))) {
 			this.authenticated = true;
 		}
 		
 		this.session.setAttribute("dev.teamnight.nightweb.core.session.userId", this.user.getId());
+		
+		UserService userv = ctx.getServiceManager().getService(UserService.class);
+		
+		user.setLastLoginDate(new Date());
+		userv.save(user);
 		
 		return authenticated;
 	}

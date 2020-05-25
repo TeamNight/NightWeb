@@ -20,8 +20,8 @@ import org.apache.logging.log4j.Logger;
 import dev.teamnight.nightweb.core.ApplicationContext;
 import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
-import dev.teamnight.nightweb.core.StringUtil;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
+import dev.teamnight.nightweb.core.util.StringUtil;
 
 /**
  * @author Jonas

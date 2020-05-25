@@ -211,12 +211,12 @@ public abstract class AbstractService<T> implements Service<T> {
 	@Override
 	public long count() {
 		Session session = factory.getCurrentSession();
+		session.beginTransaction();
 		
 		CriteriaQuery<Long> criteria = session.getCriteriaBuilder().createQuery(Long.class);
 		Root<T> root = criteria.from(this.type);
 		criteria.select(session.getCriteriaBuilder().count(root));
 		
-		session.beginTransaction();
 		Long count = session.createQuery(criteria).getSingleResult();
 		session.getTransaction().commit();
 		
@@ -226,10 +226,10 @@ public abstract class AbstractService<T> implements Service<T> {
 	@Override
 	public long count(String whereClause) {
 		Session session = factory.getCurrentSession();
+		session.beginTransaction();
 		
 		Query<Long> query = session.createQuery("SELECT COUNT(*) FROM " + this.type.getSimpleName() + " WHERE " + whereClause, Long.class);
 		
-		session.beginTransaction();
 		Long count = query
 				.getSingleResult();
 		

@@ -5,7 +5,6 @@ package dev.teamnight.nightweb.core.template;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
 
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.exceptions.TemplateProcessException;
@@ -35,12 +34,6 @@ public interface TemplateManager {
 	public TemplateBuilder builder(String templatePath, Context ctx) throws TemplateProcessException;
 	
 	public Template getTemplate(String templatePath);
-	
-	public void loadAllTemplates();
-	
-	public void loadTemplate(String templatePath);
-	
-	public List<Template> getCachedTemplates();
 	
 	public void clearTemplateCache();
 	

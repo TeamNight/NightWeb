@@ -27,6 +27,16 @@ public class UserService extends AbstractService<User> {
 		session.getTransaction().commit();
 	}
 	
+	public void loadGroups(User user) {
+		Session session = this.factory().getCurrentSession();
+		session.beginTransaction();
+		
+		User loaded = session.get(User.class, user.getId());
+		user.setGroups(loaded.getGroups());
+		
+		session.getTransaction().commit();
+	}
+	
 	@Override
 	public User getOne(Serializable key) {
 		Session session = this.factory().getCurrentSession();

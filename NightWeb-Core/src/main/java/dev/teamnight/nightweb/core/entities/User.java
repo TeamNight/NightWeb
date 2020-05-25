@@ -22,6 +22,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
 import javax.persistence.NamedEntityGraph;
 import javax.persistence.NamedAttributeNode;
 import javax.persistence.OneToMany;
@@ -69,18 +70,23 @@ public class User implements PermissionOwner<UserPermission> {
 	@Column
 	private String recoveryKey;
 	
-	@OneToMany
-	@JoinTable(
-			name = "user_groups"
-			)
+	@ManyToMany
+	@JoinTable(name = "user_groups")
 	private List<Group> groups = new ArrayList<Group>();
 	
-	@OneToMany(cascade = CascadeType.ALL, mappedBy = "user")
+	@OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "user")
 	@OrderBy("name ASC")
 	private List<UserPermission> permissions = new ArrayList<UserPermission>();
 	
 	@Column(name = "language")
 	private String languageCode;
+	
+	@Column
+	private boolean banned = false;
+	@Column
+	private String banReason;
+	@Column
+	private Date banExpiration;
 	
 	@Column(nullable = false)
 	private boolean disabled;
@@ -174,7 +180,7 @@ public class User implements PermissionOwner<UserPermission> {
 	 */
 	public List<Group> getGroups() {
 		Collections.sort(this.groups);
-		return groups;
+		return this.groups;
 	}
 	
 	/**
@@ -182,6 +188,27 @@ public class User implements PermissionOwner<UserPermission> {
 	 */
 	public String getLanguageCode() {
 		return languageCode;
+	}
+	
+	/**
+	 * @return the banned
+	 */
+	public boolean isBanned() {
+		return banned;
+	}
+	
+	/**
+	 * @return the banReason
+	 */
+	public String getBanReason() {
+		return banReason;
+	}
+	
+	/**
+	 * @return the banExpiration
+	 */
+	public Date getBanExpiration() {
+		return banExpiration;
 	}
 
 	/**
@@ -251,6 +278,15 @@ public class User implements PermissionOwner<UserPermission> {
 	 * @param group the group to add
 	 */
 	public void addGroup(Group group) {
+		Group g = this.groups.stream()
+				.filter(listedGroup -> listedGroup.getId() == group.getId())
+				.findAny()
+				.orElse(null);
+		
+		if(g != null) {
+			throw new IllegalArgumentException("Group already in groups list. Check before adding already known group");
+		}
+		
 		this.groups.add(group);
 	}
 	
@@ -273,6 +309,27 @@ public class User implements PermissionOwner<UserPermission> {
 	 */
 	public void setLanguageCode(String languageCode) {
 		this.languageCode = languageCode;
+	}
+	
+	/**
+	 * @param banned the banned to set
+	 */
+	public void setBanned(boolean banned) {
+		this.banned = banned;
+	}
+	
+	/**
+	 * @param banReason the banReason to set
+	 */
+	public void setBanReason(String banReason) {
+		this.banReason = banReason;
+	}
+	
+	/**
+	 * @param banExpiration the banExpiration to set
+	 */
+	public void setBanExpiration(Date banExpiration) {
+		this.banExpiration = banExpiration;
 	}
 
 	/**
@@ -319,7 +376,7 @@ public class User implements PermissionOwner<UserPermission> {
 		 * GroupPermission true allows, neutral ignores, false denies
 		 */
 		UserPermission userPerm = this.permissions.stream()
-				.filter(perm -> perm.getName().equals(permission))
+				.filter(perm -> perm.getName().equalsIgnoreCase(permission))
 				.filter(perm -> perm.getType() == Permission.Type.FLAG)
 				.filter(perm -> perm.getAsBoolean())
 				.findFirst()
@@ -340,7 +397,7 @@ public class User implements PermissionOwner<UserPermission> {
 			groupPermissions.addAll(
 					group.getPermissions().stream()
 						.filter(perm -> perm.getType() == Permission.Type.FLAG)
-						.filter(perm -> perm.getName().equals(permission))
+						.filter(perm -> perm.getName().equalsIgnoreCase(permission))
 						.collect(Collectors.toList())
 					);
 		});
@@ -375,9 +432,12 @@ public class User implements PermissionOwner<UserPermission> {
 				.findFirst()
 				.orElse(null);
 		
-		if(existingPerm != null) {
-			permission.setName(permission.getName().toLowerCase());
+		if(existingPerm == null) {
+			permission.setName(permission.getName());
 			this.permissions.add(permission);
+		} else {
+			LogManager.getLogger().debug("Updating user perm " + existingPerm.getName() + " to " + permission.getValue());
+			existingPerm.setValue(permission.getValue());
 		}
 	}
 
@@ -394,6 +454,7 @@ public class User implements PermissionOwner<UserPermission> {
 				.orElse(null);
 		
 		if(permission != null) {
+			LogManager.getLogger().debug("Removing permission: " + permission.getName());
 			this.permissions.remove(permission);
 		}
 	}
@@ -462,5 +523,23 @@ public class User implements PermissionOwner<UserPermission> {
 				.limit(32)
 				.collect(StringBuilder::new, StringBuilder::appendCodePoint,  StringBuilder::append)
 				.toString();
+	}
+	
+	// ----------------------------------------------------------------------- //
+	// Permission-related                                                      //
+	// ----------------------------------------------------------------------- //
+	
+	public boolean canEdit(User user) {
+		for(Group group : user.getGroups()) {
+			if(!this.hasPermission("nightweb.admin.canEditGroups." + group.getId())) {
+				return false;
+			}
+		}
+		
+		return true;
+	}
+	
+	public boolean canEdit(Group group) {
+		return this.hasPermission("nightweb.admin.canEditGroups." + group.getId());
 	}
 }

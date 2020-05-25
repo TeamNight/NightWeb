@@ -424,6 +424,8 @@ public class ModuleManagerImpl implements ModuleManager {
 		data.setEnabled(true);
 		
 		service.save(data);
+		
+		holder.getModule().onInstall(this.core);
 		LOGGER.info("Installed module >> " + data.getIdentifier());
 		
 		this.enableModule(module);

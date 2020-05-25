@@ -213,9 +213,11 @@ public class Group implements Comparable<Group>, PermissionOwner<GroupPermission
 				.findFirst()
 				.orElse(null);
 		
-		if(existingPerm != null) {
+		if(existingPerm == null) {
 			permission.setName(permission.getName().toLowerCase());
 			this.permissions.add(permission);
+		} else {
+			existingPerm.setValue(permission.getValue());
 		}
 	}
 

@@ -5,22 +5,15 @@ package dev.teamnight.nightweb.core.template;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import javax.xml.bind.JAXBException;
-
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.events.TemplatePreprocessEvent;
 import dev.teamnight.nightweb.core.exceptions.TemplateProcessException;
+import freemarker.cache.MruCacheStorage;
 import freemarker.core.HTMLOutputFormat;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
@@ -38,11 +31,6 @@ public class TemplateManagerImpl implements TemplateManager {
 	private Path templateDir;
 	
 	private LanguageManager languageManager;
-	
-	private Cache<String, Template> templateCache = CacheBuilder.newBuilder()
-			.maximumSize(10000)
-			.expireAfterAccess(3, TimeUnit.DAYS)
-			.build();
 
 	public TemplateManagerImpl(Path templateDir, Path languageDir) {
 		try {
@@ -61,26 +49,10 @@ public class TemplateManagerImpl implements TemplateManager {
 			this.configuration.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
 			this.configuration.setLogTemplateExceptions(true);
 			this.configuration.setOutputFormat(HTMLOutputFormat.INSTANCE);
+			this.configuration.setCacheStorage(new MruCacheStorage(25, Integer.MAX_VALUE));
 			
 			this.configuration.setSharedVariable("domain", NightWeb.getCoreApplication().getDomain());
 			this.configuration.setSharedVariable("languageManager", this.languageManager);
-			
-			Menu mainMenu = new Menu();
-			mainMenu.setName("mainMenu");
-			mainMenu.setActiveMenu("Home");
-			mainMenu.addLeftItem(1, mainMenu.new Item("Home", "/"));
-			mainMenu.addLeftItem(2, mainMenu.new Item("Articles", "/"));
-			
-			Menu adminMenu = new Menu();
-			adminMenu.setName("adminMenu");
-			adminMenu.setActiveMenu("Dashboard");
-			adminMenu.addLeftItem(1, adminMenu.new Item("Dashboard", "/admin"));
-			adminMenu.addLeftItem(2, adminMenu.new Item("Settings", "/admin/settings"));
-			adminMenu.addLeftItem(3, adminMenu.new Item("Modules", "/admin/modules"));
-			adminMenu.addLeftItem(4, adminMenu.new Item("Users", "/admin/users"));
-			
-			this.configuration.setSharedVariable("mainMenu", mainMenu);
-			this.configuration.setSharedVariable("adminMenu", adminMenu);
 		} catch (IOException | TemplateModelException e) {
 			e.printStackTrace();
 		}
@@ -119,9 +91,7 @@ public class TemplateManagerImpl implements TemplateManager {
 	@Override
 	public TemplateBuilder builder(String templatePath) throws TemplateProcessException {
 		try {
-			Template template = this.templateCache.get(templatePath, () -> {
-				return this.configuration.getTemplate(templatePath);
-			});
+			Template template = this.configuration.getTemplate(templatePath);
 			
 			TemplateBuilder builder = new TemplateBuilder(this, template);
 			
@@ -129,7 +99,7 @@ public class TemplateManagerImpl implements TemplateManager {
 			NightWeb.getEventManager().fireEvent(new TemplatePreprocessEvent(builder, null));
 			
 			return builder;
-		} catch (ExecutionException | IOException e) {
+		} catch (IOException e) {
 			throw new TemplateProcessException(e);
 		}
 	}
@@ -137,9 +107,7 @@ public class TemplateManagerImpl implements TemplateManager {
 	@Override
 	public TemplateBuilder builder(String templatePath, Context ctx) throws TemplateProcessException {
 		try {
-			Template template = this.templateCache.get(templatePath, () -> {
-				return this.configuration.getTemplate(templatePath);
-			});
+			Template template = this.configuration.getTemplate(templatePath);
 			
 			TemplateBuilder builder = new TemplateBuilder(this, template).assign("contextPath", ctx.getContextPath());
 			
@@ -147,7 +115,7 @@ public class TemplateManagerImpl implements TemplateManager {
 			NightWeb.getEventManager().fireEvent(new TemplatePreprocessEvent(builder, ctx));
 			
 			return builder;
-		} catch (ExecutionException | IOException e) {
+		} catch (IOException e) {
 			throw new TemplateProcessException(e);
 		}
 	}
@@ -155,95 +123,15 @@ public class TemplateManagerImpl implements TemplateManager {
 	@Override
 	public Template getTemplate(String templatePath) throws TemplateProcessException {
 		try {
-			return this.templateCache.get(templatePath, () -> {
-				return this.configuration.getTemplate(templatePath);
-			});
-		} catch (ExecutionException e) {
-			NightWeb.logError(e, this.getClass());
+			return this.configuration.getTemplate(templatePath);
+		} catch (IOException e) {
 			throw new TemplateProcessException(e);
 		}
 	}
 
 	@Override
-	public void loadAllTemplates() {
-		try {
-			Files.list(templateDir).forEach(path -> {
-				if(Files.isDirectory(path)) {
-					try {
-						this.loadTemplatesInDirectory(path);
-					} catch (IOException e) {
-						NightWeb.logError(e, this.getClass());
-						e.printStackTrace();
-					}
-				}
-				
-				String templatePath = this.templateDir.relativize(path).toString();
-				
-				try {
-					this.templateCache.get(templatePath, () -> {
-						return this.configuration.getTemplate(templatePath);
-					});
-				} catch (ExecutionException e) {
-					NightWeb.logError(e, this.getClass());
-					e.printStackTrace();
-				}
-			});
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public void loadTemplatesInDirectory(Path path) throws IOException {
-		Files.list(path).forEach(listPath -> {
-			if(Files.isDirectory(listPath)) {
-				try {
-					this.loadTemplatesInDirectory(listPath);
-					return;
-				} catch (IOException e) {
-					NightWeb.logError(e, this.getClass());
-					e.printStackTrace();
-				}
-			}
-			
-			String templatePath = this.templateDir.relativize(listPath).toString();
-			
-			try {
-				this.templateCache.get(templatePath, () -> {
-					return this.configuration.getTemplate(templatePath);
-				});
-			} catch (ExecutionException e) {
-				NightWeb.logError(e, this.getClass());
-				e.printStackTrace();
-			}
-		});
-	}
-
-	@Override
-	public void loadTemplate(String templatePath) {
-		try {
-			this.templateCache.get(templatePath, () -> {
-				return this.configuration.getTemplate(templatePath);
-			});
-		} catch (ExecutionException e) {
-			NightWeb.logError(e, this.getClass());
-			e.printStackTrace();
-		}
-	}
-
-	@Override
-	public List<Template> getCachedTemplates() {
-		List<Template> templates = new ArrayList<Template>();
-		
-		for(Template temp : this.templateCache.asMap().values()) {
-			templates.add(temp);
-		}
-		
-		return templates;
-	}
-
-	@Override
 	public void clearTemplateCache() {
-		this.templateCache.invalidateAll();
+		this.configuration.clearTemplateCache();
 	}
 	
 	@Override

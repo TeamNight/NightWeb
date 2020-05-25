@@ -97,12 +97,31 @@ public class LoginServlet extends HttpServlet {
 			return;
 		}
 		
-		
 		//Check user password
 		auth.setUser(user);
 		
 		if(!auth.authenticate(password)) {
-			ctx.getTemplate("login.tpl").assign("failed", "invalidPasswordError").send(resp);
+			if(user.isDisabled()) {
+				ctx.getTemplate("login.tpl").assign("failed", "userDisabledError").send(resp);
+			} else if(user.isBanned()) {
+				if(user.getBanExpiration() != null) {
+					long currentTime = System.currentTimeMillis();
+					
+					if(currentTime >= user.getBanExpiration().getTime()) {
+						user.setBanned(false);
+						user.setBanExpiration(null);
+						user.setBanReason(null);
+						
+						userServ.save(user);
+						this.doPost(req, resp);
+						return;
+					}
+				}
+				
+				ctx.getTemplate("login.tpl").assign("failed", "userBannedError").assign("banReason", user.getBanReason()).assign("banExpirationDate", user.getBanExpiration()).send(resp);
+			} else {
+				ctx.getTemplate("login.tpl").assign("failed", "invalidPasswordError").send(resp);
+			}
 			return;
 		}
 		

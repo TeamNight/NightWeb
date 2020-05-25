@@ -35,8 +35,9 @@ import dev.teamnight.nightweb.core.template.TemplateManager;
 
 public class JettyApplicationContext implements ApplicationContext {
 
-	private static FilterHolder adminAuthenticationFilter = new FilterHolder(
+	private FilterHolder adminAuthenticationFilter = new FilterHolder(
 			new AdminAuthenticationFilter(
+					this,
 					NightWeb.getServiceManager().getService(ApplicationService.class).getByIdentifier("dev.teamnight.nightweb.core")
 					)
 			);

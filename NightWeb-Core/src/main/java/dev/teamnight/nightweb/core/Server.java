@@ -46,6 +46,13 @@ public interface Server {
 	public String getServletURL(Class<? extends HttpServlet> servletClass);
 	
 	/**
+	 * Returns the mapping for the specified servlet in order to access the URL right, implements context path and the mapping without ending slash or *.
+	 * @param Class<? extends HttpServlet> servletClass
+	 * @return String the URL
+	 */
+	public String getServletURL(String servletClass);
+	
+	/**
 	 * Sets the ip address the server shall listen
 	 * @param String the IP Address
 	 */

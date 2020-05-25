@@ -115,7 +115,10 @@ public class AdminSettingsServlet extends HttpServlet {
 		
 		List<SystemSetting> settings = setserv.getByCategory(categoryName);
 		
+		LogManager.getLogger().debug("Settings size: " + settings.size());
+		
 		for(SystemSetting setting : settings) {
+			LogManager.getLogger().debug("Current Setting: " + setting.getKey());
 			String value = req.getParameter("setting-" + setting.getKey());
 			
 			if(value == null) {
@@ -171,9 +174,9 @@ public class AdminSettingsServlet extends HttpServlet {
 			LogManager.getLogger().debug("Settings new Value: " + setting.getValue());
 			
 			setserv.save(setting);
-			
-			resp.sendRedirect(req.getRequestURI() + "?saved");
 		}
+		
+		resp.sendRedirect(req.getRequestURI() + "?saved");
 	}
 
 }

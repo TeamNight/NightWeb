@@ -17,6 +17,11 @@ public class TemplateProcessException extends RuntimeException {
 	}
 	
 	@Override
+	public synchronized Throwable getCause() {
+		return this.exception;
+	}
+	
+	@Override
 	public void printStackTrace() {
 		this.exception.printStackTrace();
 	}

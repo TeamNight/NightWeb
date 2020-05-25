@@ -16,8 +16,8 @@ import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.PathParameters;
 import dev.teamnight.nightweb.core.annotations.AdminServlet;
-import dev.teamnight.nightweb.core.entities.ModuleData;
-import dev.teamnight.nightweb.core.service.ModuleService;
+import dev.teamnight.nightweb.core.entities.User;
+import dev.teamnight.nightweb.core.service.UserService;
 import dev.teamnight.nightweb.core.util.StringUtil;
 
 /**
@@ -25,7 +25,7 @@ import dev.teamnight.nightweb.core.util.StringUtil;
  *
  */
 @AdminServlet
-public class AdminModuleUninstallServlet extends HttpServlet {
+public class AdminUserEnableServlet extends HttpServlet {
 
 	private static final long serialVersionUID = 1L;
 
@@ -34,45 +34,42 @@ public class AdminModuleUninstallServlet extends HttpServlet {
 		Context ctx = Context.get(req);
 		Authenticator auth = ctx.getAuthenticator(req.getSession());
 		
-		if(!auth.getUser().hasPermission("nightweb.admin.canUninstallModules")) {
+		if(!auth.getUser().hasPermission("nightweb.admin.canDisableUsers")) {
 			ctx.getTemplate("admin/permissionError.tpl").send(resp);
 			return;
 		}
 		
-		String sId = new PathParameters(req.getPathInfo()).getParameter(0);
+		String sUserId = new PathParameters(req.getPathInfo()).getParameter(0);
+		
+		long userId = 0L;
 		
 		LongValidator val = LongValidator.getInstance();
-		if(!val.isValid(sId)) {
-			ctx.getTemplate("admin/deleteModule.tpl")
-				.assign("currentUser", auth.getUser())
-				.assign("failed", "invalidIDError")
-				.send(resp);
+		if(val.isValid(sUserId)) {
+			userId = Long.parseLong(sUserId);
+		}
+		
+		if(userId == 0L) {
+			resp.sendRedirect(StringUtil.filterURL(ctx.getContextPath() + "/admin/users?error=unknownUser"));
 			return;
 		}
 		
-		long id = Long.parseLong(sId);
+		UserService userv = ctx.getServiceManager().getService(UserService.class);
+		User user = userv.getOne(userId);
 		
-		ModuleService serv = ctx.getServiceManager().getService(ModuleService.class);
-		ModuleData data = serv.getOne(id);
-		
-		if(data == null) {
-			ctx.getTemplate("admin/deleteModule.tpl")
-				.assign("session", auth.getUser())
-				.assign("failed", "unknownModuleError")
-				.send(resp);
+		if(user == null) {
+			resp.sendRedirect(StringUtil.filterURL(ctx.getContextPath() + "/admin/users?error=unknownUser"));
 			return;
 		}
 		
-		if(data.getIdentifier().equalsIgnoreCase("dev.teamnight.nightweb.core")) {
-			ctx.getTemplate("admin/deleteModule.tpl")
-				.assign("session", auth.getUser())
-				.assign("failed", "unknownModuleError")
-				.send(resp);
+		if(!auth.getUser().canEdit(user) || auth.getUser().getId() == user.getId()) {
+			resp.sendRedirect(StringUtil.filterURL(ctx.getContextPath() + "/admin/users?error=insufficientPermission"));
 			return;
 		}
 		
-		serv.delete(data);
-		resp.sendRedirect(StringUtil.filterURL(ctx.getContextPath() + "/admin/modules?deleted=true"));
+		user.setDisabled(false);
+		
+		userv.save(user);
+		resp.sendRedirect(StringUtil.filterURL(ctx.getContextPath() + "/admin/users?enabled"));
 	}
 	
 }

@@ -75,7 +75,7 @@ public class SettingService extends AbstractService<SystemSetting> {
 		Session session = this.factory().getCurrentSession();
 		session.beginTransaction();
 		
-		Query<SystemSetting> query = session.createQuery("FROM " + this.getType().getSimpleName() + " S WHERE category LIKE :category", this.getType());
+		Query<SystemSetting> query = session.createQuery("FROM " + this.getType().getSimpleName() + " S WHERE category LIKE :category ORDER BY S.showOrder ASC", this.getType());
 		query.setParameter("category", "%" + category + "%");
 		
 		List<SystemSetting> results = query.getResultList();

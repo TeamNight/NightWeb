@@ -16,9 +16,9 @@ import org.eclipse.jetty.util.URIUtil;
 
 import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
-import dev.teamnight.nightweb.core.StringUtil;
 import dev.teamnight.nightweb.core.entities.User;
 import dev.teamnight.nightweb.core.service.UserService;
+import dev.teamnight.nightweb.core.util.StringUtil;
 
 /**
  * @author Jonas

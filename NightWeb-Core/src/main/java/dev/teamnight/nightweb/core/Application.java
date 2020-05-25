@@ -17,6 +17,9 @@ public abstract class Application implements NightModule {
 	public abstract void start(ApplicationContext ctx);
 	
 	@Override
+	public void onInstall(NightWebCore core) {}
+	
+	@Override
 	public void init(Context ctx) {
 		if(!(ctx instanceof ApplicationContext)) {
 			throw new IllegalArgumentException("Application expects an ApplicationContext");

@@ -65,8 +65,7 @@ public class JettyErrorHandler extends ErrorHandler {
 			writer.write(temp);
 			writer.flush();
 		} catch(TemplateProcessException e) {
-			writer.write(Integer.toString(code));
-			writer.write(message);
+			writer.write("<h1>" + message + "</h1>");
 			
 			if(showStacks) {
 				writer.write("Caused by: \n");

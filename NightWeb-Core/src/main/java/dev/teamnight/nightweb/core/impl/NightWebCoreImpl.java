@@ -9,8 +9,10 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpSession;
@@ -40,7 +42,10 @@ import dev.teamnight.nightweb.core.entities.ApplicationData;
 import dev.teamnight.nightweb.core.entities.DefaultPermission;
 import dev.teamnight.nightweb.core.entities.Group;
 import dev.teamnight.nightweb.core.entities.GroupPermission;
+import dev.teamnight.nightweb.core.entities.Menu;
+import dev.teamnight.nightweb.core.entities.MenuItem;
 import dev.teamnight.nightweb.core.entities.ModuleData;
+import dev.teamnight.nightweb.core.entities.PermissionCategory;
 import dev.teamnight.nightweb.core.entities.Permission.Tribool;
 import dev.teamnight.nightweb.core.entities.User;
 import dev.teamnight.nightweb.core.entities.UserPermission;
@@ -57,6 +62,7 @@ import dev.teamnight.nightweb.core.module.ModuleManagerImpl;
 import dev.teamnight.nightweb.core.service.ApplicationService;
 import dev.teamnight.nightweb.core.service.ErrorLogService;
 import dev.teamnight.nightweb.core.service.GroupService;
+import dev.teamnight.nightweb.core.service.MenuService;
 import dev.teamnight.nightweb.core.service.ModuleService;
 import dev.teamnight.nightweb.core.service.PermissionService;
 import dev.teamnight.nightweb.core.service.ServiceManager;
@@ -69,6 +75,7 @@ import dev.teamnight.nightweb.core.servlets.LogoutServlet;
 import dev.teamnight.nightweb.core.servlets.RegistrationServlet;
 import dev.teamnight.nightweb.core.servlets.TestServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminDashboardServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminDevAutoLoginServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminLoginServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminModuleEditServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminModuleInstallListServlet;
@@ -76,6 +83,15 @@ import dev.teamnight.nightweb.core.servlets.admin.AdminModuleInstallServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminModuleListServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminModuleUninstallServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminSettingsServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminUserAddServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminUserBanServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminUserDeleteServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminUserDisableServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminUserEditServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminUserEnableServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminUserListServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminUserPermissionsEditServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminUserUnbanServlet;
 import dev.teamnight.nightweb.core.template.TemplateManager;
 import dev.teamnight.nightweb.core.template.TemplateManagerImpl;
 import freemarker.template.TemplateModelException;
@@ -203,11 +219,14 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 				.addAnnotatedClass(ApplicationData.class)
 				.addAnnotatedClass(SystemSetting.class)
 				.addAnnotatedClass(UserSetting.class)
+				.addAnnotatedClass(PermissionCategory.class)
 				.addAnnotatedClass(DefaultPermission.class)
 				.addAnnotatedClass(UserPermission.class)
 				.addAnnotatedClass(GroupPermission.class)
 				.addAnnotatedClass(User.class)
-				.addAnnotatedClass(Group.class);
+				.addAnnotatedClass(Group.class)
+				.addAnnotatedClass(Menu.class)
+				.addAnnotatedClass(MenuItem.class);
 		
 		//Event Manager
 		this.eventManager = new DefaultEventManagerImpl();
@@ -223,7 +242,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 			
 			List<Class<?>> classList = new ArrayList<Class<?>>();
 			
-			module.configure(classList);
+			module.configureORM(classList);
 			
 			classList.forEach(clazz -> hibernateConf.addAnnotatedClass(clazz));
 		});
@@ -248,6 +267,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		this.serviceMan.register(GroupService.class);
 		this.serviceMan.register(PermissionService.class);
 		this.serviceMan.register(ErrorLogService.class);
+		this.serviceMan.register(MenuService.class);
 		
 		//Retrieve the application data for the core application which is needed for default settings
 		LOGGER.info("Enabling core application...");
@@ -268,18 +288,12 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		this.templateManager = new TemplateManagerImpl(NightWeb.TEMPLATES_DIR, NightWeb.LANG_DIR);
 		
 		//Doing setup things
-		LOGGER.info("Creating default settings & permissions if not already existing...");
+		LOGGER.info("Creating default values if not already existing...");
 		this.createDefaultSettings(data.getModuleData());
 		this.createDefaultPermissions(data.getModuleData());
 		this.createDefaultGroups(data);
+		this.createDefaultMenus(data.getModuleData());
 		this.registerEvents();
-		
-		//Set default language as shared variable for template function lang()
-		try {
-			this.templateManager.setSharedVariable("defaultLanguage", this.serviceMan.getService(SettingService.class).getByKey("defaultLanguage").getValue());
-		} catch (TemplateModelException e) {
-			e.printStackTrace();
-		}
 		
 		this.setIdentifier("dev.teamnight.nightweb.core");
 		ApplicationContext coreContext = this.server.getContext(this);
@@ -288,10 +302,44 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		LOGGER.info("Enabling modules...");
 		this.moduleManager.enableModules();
 		
+		//Set default language as shared variable for template function lang()
+		//Set also the two important menus
+		try {
+			this.templateManager.setSharedVariable("defaultLanguage", this.serviceMan.getService(SettingService.class).getByKey("defaultLanguage").getValue());
+			this.templateManager.setSharedVariable("mainMenu", this.serviceMan.getService(MenuService.class).getByIdentifier("dev.teamnight.nightweb.core.mainMenu"));
+			this.templateManager.setSharedVariable("adminMenu", this.serviceMan.getService(MenuService.class).getByIdentifier("dev.teamnight.nightweb.core.adminMenu"));
+		} catch (TemplateModelException e) {
+			e.printStackTrace();
+		}
+		
 		LOGGER.info("Loaded up in " + TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - start) + "s");
 		
 		LOGGER.info("Starting server");
 		this.server.start();
+	}
+
+	/**
+	 * @param moduleData
+	 */
+	private void createDefaultMenus(ModuleData moduleData) {
+		Menu mainMenu = new Menu("dev.teamnight.nightweb.core.mainMenu", moduleData);
+		MenuItem homeItem = new MenuItem(mainMenu, MenuItem.Type.LINK, "dev.teamnight.nightweb.core.mainMenu.root", null, null, "/", 1, null);
+		//MenuItem articlesItem = new MenuItem(null, MenuItem.Type.LINK, "dev.teamnight.nightweb.core.mainMenu.articles", null, null/*TODO: Replace by ArticlesListServlet*/, null, 1, null);
+		
+		mainMenu.addNode(homeItem);
+		
+		Menu acpMenu = new Menu("dev.teamnight.nightweb.core.adminMenu", moduleData);
+		MenuItem dashboardItem = new MenuItem(acpMenu, MenuItem.Type.LINK, "dev.teamnight.nightweb.core.adminMenu.root", null, AdminDashboardServlet.class.getName(), null, 1, null);
+		MenuItem settingsItem = new MenuItem(acpMenu, MenuItem.Type.LINK, "dev.teamnight.nightweb.core.adminMenu.settings", null, AdminSettingsServlet.class.getName(), null, 2, null);
+		MenuItem modulesItem = new MenuItem(acpMenu, MenuItem.Type.LINK, "dev.teamnight.nightweb.core.adminMenu.modules", null, AdminModuleListServlet.class.getName(), null, 3, null);
+		MenuItem usersItem = new MenuItem(acpMenu, MenuItem.Type.LINK, "dev.teamnight.nightweb.core.adminMenu.users", null, AdminUserListServlet.class.getName(), null, 4, null);
+		
+		acpMenu.addNode(dashboardItem);
+		acpMenu.addNode(settingsItem);
+		acpMenu.addNode(modulesItem);
+		acpMenu.addNode(usersItem);
+		
+		this.serviceMan.getService(MenuService.class).create(mainMenu, acpMenu);
 	}
 
 	private void createDefaultSettings(ModuleData data) {
@@ -326,14 +374,73 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	}
 	
 	private void createDefaultPermissions(ModuleData data) {
-		DefaultPermission bypassDisabledLogin = new DefaultPermission("nightweb.admin.canBypassDisabledLogin", Tribool.NEUTRAL, data);
-		DefaultPermission canUseACP = new DefaultPermission("nightweb.admin.canUseACP", Tribool.NEUTRAL, data);
-		DefaultPermission canEditModules = new DefaultPermission("nightweb.admin.canManageModules", Tribool.NEUTRAL, data);
-		DefaultPermission canInstallModules = new DefaultPermission("nightweb.admin.canInstallModules", Tribool.NEUTRAL, data);
-		DefaultPermission canUninstallModules = new DefaultPermission("nightweb.admin.canUninstallModules", Tribool.NEUTRAL, data);
-		DefaultPermission canManageSettings = new DefaultPermission("nightweb.admin.canManageSettings", Tribool.NEUTRAL, data);
+		PermissionService permServ = this.serviceMan.getService(PermissionService.class);
 		
-		this.serviceMan.getService(PermissionService.class).create(bypassDisabledLogin, canUseACP, canEditModules, canInstallModules, canUninstallModules, canManageSettings);
+		//Setting up top-level categories
+		PermissionCategory generalCategory = new PermissionCategory("general", 1, null);
+		PermissionCategory moderatorCategory = new PermissionCategory("moderator", 2, null);
+		PermissionCategory adminCategory = new PermissionCategory("admin", 3, null);
+		generalCategory = this.createAndGet(permServ, generalCategory);
+		moderatorCategory = this.createAndGet(permServ, moderatorCategory);
+		adminCategory = this.createAndGet(permServ, adminCategory);
+		
+		//Setting up second-level categories
+		PermissionCategory adminGeneralCategory = new PermissionCategory("admin.general", 1, adminCategory);
+		PermissionCategory adminConfigCategory = new PermissionCategory("admin.config", 2, adminCategory);
+		PermissionCategory adminUsersCategory = new PermissionCategory("admin.users", 3, adminCategory);
+		PermissionCategory modUsersCategory = new PermissionCategory("moderator.users", 1, moderatorCategory);
+		adminGeneralCategory = this.createAndGet(permServ, adminGeneralCategory);
+		adminConfigCategory = this.createAndGet(permServ, adminConfigCategory);
+		adminUsersCategory = this.createAndGet(permServ, adminUsersCategory);
+		modUsersCategory = this.createAndGet(permServ, modUsersCategory);
+		
+		//Setting up third-level-categories
+		PermissionCategory adminConfigModulesCategory = new PermissionCategory("admin.config.modules", 2, adminConfigCategory);
+		PermissionCategory adminUsersUserCategory = new PermissionCategory("admin.users.user", 1, adminUsersCategory);
+		PermissionCategory adminUsersGroupCategory = new PermissionCategory("admin.users.group", 3, adminUsersCategory);
+		adminConfigModulesCategory = this.createAndGet(permServ, adminConfigModulesCategory);
+		adminUsersUserCategory = this.createAndGet(permServ, adminUsersUserCategory);
+		adminUsersGroupCategory = this.createAndGet(permServ, adminUsersGroupCategory);
+		
+		//Setting up fourth-level categories (the useless ones and not recommended to use)
+		PermissionCategory adminUsersGroupGroupsCategory = new PermissionCategory("admin.users.group.groups", 2, adminUsersGroupCategory);
+		adminUsersGroupGroupsCategory = this.createAndGet(permServ, adminUsersGroupGroupsCategory);
+		
+		//Setting up permissions
+		DefaultPermission bypassDisabledLogin = new DefaultPermission("nightweb.admin.canBypassDisabledLogin", Tribool.NEUTRAL, adminGeneralCategory, 1, data);
+		DefaultPermission canUseACP = new DefaultPermission("nightweb.admin.canUseACP", Tribool.NEUTRAL, adminGeneralCategory, 2, data);
+		DefaultPermission canEditModules = new DefaultPermission("nightweb.admin.canManageModules", Tribool.NEUTRAL, adminConfigModulesCategory, 1, data);
+		DefaultPermission canInstallModules = new DefaultPermission("nightweb.admin.canInstallModules", Tribool.NEUTRAL, adminConfigModulesCategory, 2, data);
+		DefaultPermission canUninstallModules = new DefaultPermission("nightweb.admin.canUninstallModules", Tribool.NEUTRAL, adminConfigModulesCategory, 3, data);
+		DefaultPermission canManageSettings = new DefaultPermission("nightweb.admin.canManageSettings", Tribool.NEUTRAL, adminConfigCategory, 1, data);
+		DefaultPermission canEditPermissions = new DefaultPermission("nightweb.admin.canEditPermissions", Tribool.NEUTRAL, adminUsersCategory, 1, data);
+		DefaultPermission canManageUsers = new DefaultPermission("nightweb.admin.canManageUsers", Tribool.NEUTRAL, adminUsersUserCategory, 1, data);
+		DefaultPermission canCreateUsers = new DefaultPermission("nightweb.admin.canCreateUsers", Tribool.NEUTRAL, adminUsersUserCategory, 2, data);
+		DefaultPermission canEditUsers = new DefaultPermission("nightweb.admin.canEditUsers", Tribool.NEUTRAL, adminUsersUserCategory, 3, data);
+		DefaultPermission canDeleteUsers = new DefaultPermission("nightweb.admin.canDeleteUsers", Tribool.NEUTRAL, adminUsersUserCategory, 4, data);
+		DefaultPermission canDisableUsers = new DefaultPermission("nightweb.admin.canDisableUsers", Tribool.NEUTRAL, adminUsersUserCategory, 5, data);
+		DefaultPermission canEditGroups = new DefaultPermission("nightweb.admin.canEditGroups", Tribool.NEUTRAL, adminUsersGroupCategory, 1, data);
+		
+		DefaultPermission canBanUsers = new DefaultPermission("nightweb.moderator.canSuspendUsers", Tribool.NEUTRAL, modUsersCategory, 1, data);
+		
+		List<Group> groups = this.serviceMan.getService(GroupService.class).getAll();
+		Collections.sort(groups, (group, other) -> Long.compare(group.getId(), group.getId()));
+		
+		int i = 0;
+		for(Group group : groups) {
+			i++;
+			DefaultPermission groupPerm = new DefaultPermission("nightweb.admin.canEditGroups." + group.getId(), Tribool.NEUTRAL, adminUsersGroupGroupsCategory, i, data);
+			permServ.create(groupPerm);
+		}
+		
+		permServ.create(bypassDisabledLogin, canUseACP, canEditModules, canInstallModules, canUninstallModules, canManageSettings, canEditPermissions, canManageUsers,
+				canCreateUsers, canEditUsers, canDeleteUsers, canDisableUsers, canBanUsers, canEditGroups);
+	}
+	
+	private PermissionCategory createAndGet(PermissionService serv, PermissionCategory newCategory) {
+		serv.createCategory(newCategory);
+		
+		return serv.getCategoryByName(newCategory.getName());
 	}
 	
 	private void createDefaultGroups(ApplicationData data) {
@@ -376,6 +483,18 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 			SystemSetting metaDesc = setserv.getByKey("metaDescription");
 			
 			tmpEvent.getTemplateBuilder().assign("title", pageTitle.getValue()).assign("pageDescription", pageDesc).assign("metaKeywords", metaKeywords).assign("metaDescription", metaDesc);
+			
+			Pattern pattern = Pattern.compile("^(.*)(user|group)Permission(.*)$", Pattern.CASE_INSENSITIVE);
+					
+			if(pattern.matcher(tmpEvent.getTemplateBuilder().getTemplate().getName()).matches()) {
+				GroupService gServ = this.serviceMan.getService(GroupService.class);
+				
+				List<Group> groups = gServ.getAll();
+				
+				for(Group group : groups) {
+					tmpEvent.getTemplateBuilder().assign("customPermissionLabel.nightweb.admin.canEditGroups." + group.getId(), group.getName());
+				}
+			}
 		});
 	}
 
@@ -399,7 +518,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	// ----------------------------------------------------------------------- //
 
 	@Override
-	public void configure(List<Class<?>> entityList) {
+	public void configureORM(List<Class<?>> entityList) {
 		//Ignore this, all core classes are getting loaded at startup in the constructor
 	}
 
@@ -426,9 +545,19 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		ctx.registerServlet(AdminModuleInstallServlet.class, "/admin/install");
 		ctx.registerServlet(AdminModuleUninstallServlet.class, "/admin/uninstall/*");
 		ctx.registerServlet(AdminSettingsServlet.class, "/admin/settings/*");
+		ctx.registerServlet(AdminUserListServlet.class, "/admin/users/*");
+		ctx.registerServlet(AdminUserEditServlet.class, "/admin/user/edit/*");
+		ctx.registerServlet(AdminUserAddServlet.class, "/admin/user/add");
+		ctx.registerServlet(AdminUserDeleteServlet.class, "/admin/user/delete/*");
+		ctx.registerServlet(AdminUserDisableServlet.class, "/admin/user/disable/*");
+		ctx.registerServlet(AdminUserBanServlet.class, "/admin/user/ban/*");
+		ctx.registerServlet(AdminUserEnableServlet.class, "/admin/user/enable/*");
+		ctx.registerServlet(AdminUserUnbanServlet.class, "/admin/user/unban/*");
+		ctx.registerServlet(AdminUserPermissionsEditServlet.class, "/admin/user/permissions/*");
 		
 		//Test
 		ctx.registerServlet(TestServlet.class, "/test");
+		ctx.registerServlet(AdminDevAutoLoginServlet.class, "/admin/autologin");
 	}
 	
 	// ----------------------------------------------------------------------- //
@@ -447,17 +576,17 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 
 	@Override
 	public String getIPAddress() {
-		return null;
+		return this.config.getHostIPAddress();
 	}
 
 	@Override
 	public String getDomain() {
-		return "NightWeb";
+		return this.config.getDomain();
 	}
 
 	@Override
 	public int getPort() {
-		return 0;
+		return this.config.getPort();
 	}
 
 	@Override

@@ -19,6 +19,9 @@ public abstract class JavaModule implements NightModule {
 	public abstract void start(Context ctx);
 	
 	@Override
+	public void onInstall(NightWebCore core) {}
+	
+	@Override
 	public void init(Context ctx) {
 		if(!(ctx instanceof ModuleContext)) {
 			throw new IllegalArgumentException("JavaModule expects a ModuleContext");

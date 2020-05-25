@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
+
 /**
  * @author Jonas
  *
@@ -56,6 +58,7 @@ public class DefaultEventManagerImpl implements EventManager {
 
 	@Override
 	public void fireEvent(Event event) {
+		LogManager.getLogger().debug("Executing event: " + event.getClass().getSimpleName());
 		for(ListenerHolder holder : this.listeners) {
 			if(holder.getSpecificEvent() != null) {
 				if(!holder.getSpecificEvent().isInstance(event)) {

@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2020 Jonas Müller, Jannik Müller
  */
-package dev.teamnight.nightweb.core;
+package dev.teamnight.nightweb.core.util;
 
 import java.util.Random;
 

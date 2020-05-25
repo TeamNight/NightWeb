@@ -43,10 +43,10 @@ import dev.teamnight.nightweb.core.AuthenticatorFactory;
 import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.Server;
-import dev.teamnight.nightweb.core.StringUtil;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
 import dev.teamnight.nightweb.core.entities.XmlConfiguration;
 import dev.teamnight.nightweb.core.service.ApplicationService;
+import dev.teamnight.nightweb.core.util.StringUtil;
 
 public class JettyServer implements Server, HttpSessionListener, HttpSessionIdListener {
 
@@ -239,6 +239,7 @@ public class JettyServer implements Server, HttpSessionListener, HttpSessionIdLi
 		handler.setInitParameter("org.eclipse.jetty.servlet.SessionIdPathParameterName", "none");
 		handler.setContextPath(data.getContextPath());
 		handler.setErrorHandler(this.server.getErrorHandler());
+		handler.getServletHandler().setServletMappings(new ServletMapping[] {}); //to fix a bug in getServletURL
 		
 		SessionHandler sessions = new SessionHandler();
 		sessions.setServer(this.server);
@@ -256,6 +257,11 @@ public class JettyServer implements Server, HttpSessionListener, HttpSessionIdLi
 	
 	@Override
 	public String getServletURL(Class<? extends HttpServlet> servletClass) {
+		return this.getServletURL(servletClass.getName());
+	}
+	
+	@Override
+	public String getServletURL(String servletClass) {
 		String url = null;
 		
 		for(Handler handler : this.servletContextHandlers.getHandlers()) {
@@ -264,8 +270,17 @@ public class JettyServer implements Server, HttpSessionListener, HttpSessionIdLi
 			}
 			ServletContextHandler ctxHandler = (ServletContextHandler) handler;
 			
+			LOGGER.debug("ServletContextHandler " + ctxHandler.getContextPath());
+			LOGGER.debug("ServletMappings not null: " + (ctxHandler.getServletHandler().getServletMappings() != null));
+			
+			try {
+				throw new RuntimeException("test");
+			} catch(Exception e) {
+				e.printStackTrace();
+			}
+			
 			for(ServletMapping map : ctxHandler.getServletHandler().getServletMappings()) {
-				if(map.getServletName().startsWith(servletClass.getName())) {
+				if(map.getServletName().startsWith(servletClass)) {
 					url = map.getPathSpecs()[0].replace("/*", "");
 					
 					url = StringUtil.filterURL(ctxHandler.getContextPath() + url);
