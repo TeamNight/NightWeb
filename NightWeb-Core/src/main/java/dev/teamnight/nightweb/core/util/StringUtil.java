@@ -3,7 +3,10 @@
  */
 package dev.teamnight.nightweb.core.util;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -59,6 +62,39 @@ public final class StringUtil {
 	
 	public static String sanitizeHTML(String html) {
 		return htmlPolicy.sanitize(html);
+	}
+	
+	public static List<String> parseAcceptHeader(String acceptHeader) {
+		return Arrays.stream(acceptHeader.split(",")).sorted((a, b) -> {
+			double aPriority = 1.0;
+			double bPriority = 1.0;
+			
+			if(a.contains(";")) {
+				String aPriorityStr = a.split(";")[1];
+				String[] tempArr = aPriorityStr.split("=");
+				
+				if(tempArr[0].equalsIgnoreCase("q")) {
+					aPriority = Double.parseDouble(tempArr[1]);
+				}
+			}
+			
+			if(b.contains(";")) {
+				String bPriorityStr = b.split(";")[1];
+				String[] tempArr = bPriorityStr.split("=");
+				
+				if(tempArr[0].equalsIgnoreCase("q")) {
+					bPriority = Double.parseDouble(tempArr[1]);
+				}
+			}
+			
+			if(aPriority > bPriority) {
+				return -1;
+			} else if(bPriority > aPriority) {
+				return 1;
+			}
+			
+			return 0;
+		}).map(str -> str.split(";")[0]).collect(Collectors.toList());
 	}
 	
 	public static String filterURL(String url) {

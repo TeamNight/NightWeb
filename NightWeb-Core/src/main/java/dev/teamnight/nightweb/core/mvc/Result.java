@@ -49,8 +49,8 @@ public class Result {
 		return this.status;
 	}
 	
-	public String statusMessage() {
-		return this.statusMessage;
+	public Optional<String> statusMessage() {
+		return Optional.ofNullable(this.statusMessage);
 	}
 	
 	public Result status(int status) {

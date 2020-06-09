@@ -4,6 +4,7 @@
 package dev.teamnight.nightweb.core.mvc;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
@@ -12,6 +13,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.servlet.GenericServlet;
 import javax.servlet.ServletException;
@@ -22,6 +25,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.eclipse.jetty.http.HttpStatus;
 
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.mvc.annotations.Accepts;
@@ -31,6 +35,7 @@ import dev.teamnight.nightweb.core.mvc.annotations.Path;
 import dev.teamnight.nightweb.core.mvc.annotations.PathParam;
 import dev.teamnight.nightweb.core.mvc.annotations.Produces;
 import dev.teamnight.nightweb.core.mvc.annotations.QueryParam;
+import dev.teamnight.nightweb.core.util.StringUtil;
 
 /**
  * The Router class
@@ -47,11 +52,16 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 	private PathResolver pathResolver;
 	
 	private List<MethodHolder> routes = new ArrayList<MethodHolder>();
+	private List<Controller> controllers = new ArrayList<Controller>();
 
 	public ServletRouterImpl(Context ctx) {
 		this.ctx = ctx;
 		this.pathResolver = new PathResolver();
 	}
+	
+	// ----------------------------------------------------------------------- //
+	// GenericServlet                                                          //
+	// ----------------------------------------------------------------------- //
 	
 	@Override
 	public void service(ServletRequest req, ServletResponse res) throws ServletException, IOException {
@@ -62,16 +72,107 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 		this.service((HttpServletRequest) req, (HttpServletResponse) res);
 	}
 	
+	// ----------------------------------------------------------------------- //
+	// Handling                                                                //
+	// ----------------------------------------------------------------------- //
+	
 	/**
 	 * Main method for the Router to be called when a route is accessed
+	 * @throws IOException 
+	 * @throws ServletException 
 	 */
-	protected void service(HttpServletRequest req, HttpServletResponse res) {
+	protected void service(HttpServletRequest req, HttpServletResponse res) throws IOException, ServletException {
+		String url = req.getPathInfo();
 		
+		if(!this.pathExists(url)) {
+			res.sendError(HttpStatus.NOT_FOUND_404, "The path <b>" + req.getRequestURI() + "<b> was not found.");
+		}
+		
+		RouteQuery query = RouteQuery.of(url).method(req.getMethod());
+		
+		MethodHolder holder = null;
+		
+		if(this.getMethodByURL(query) == null) {
+			res.sendError(HttpStatus.METHOD_NOT_ALLOWED_405, "The method " + query.method() + " is not allowed for the path <b>" + req.getRequestURI() + "</b>.");
+		}
+		
+		List<String> acceptHeaders = StringUtil.parseAcceptHeader(req.getHeader("Accept"));
+		
+		if(!acceptHeaders.isEmpty()) {
+			int i = 0;
+			String acceptHeader = acceptHeaders.get(i);
+			
+			while(holder == null) {
+				query.produces(acceptHeader);
+				
+				holder = this.getMethodByURL(query);
+			}
+		} else {
+			holder = this.getMethodByURL(query);
+		}
+		
+		if(holder == null) {
+			res.sendError(HttpStatus.BAD_REQUEST_400, "The Accept-Headers are not allowed for <b>" + req.getRequestURI() + "</b>.");
+		}
+		
+		if(holder.getAccepts().isPresent()) {
+			if(req.getContentType() == null) {
+				res.sendError(HttpStatus.BAD_REQUEST_400, "Request Content-Type is not allowed");
+			}
+			
+			if(!holder.getAccepts().get().equalsIgnoreCase(req.getContentType())) {
+				res.sendError(HttpStatus.BAD_REQUEST_400, "Request Content-Type is not allowed");
+			}
+		}
+		
+		Map<RequestParameter, String> params = this.pathResolver.resolvePathParameters(
+				holder.getRegex(), 
+				holder.getParameters().keySet().toArray(new RequestParameter[holder.getParameters().size()]), 
+				url);
+		
+		try {
+			Result result = holder.executeMethod(req, res, params);
+			
+			if(result.status() > 399) {
+				if(result.statusMessage().isPresent()) {
+					res.sendError(result.status(), result.statusMessage().get());
+				} else {
+					res.sendError(result.status());
+				}
+				
+				return;
+			}
+			
+			//TODO: parse JSON or else
+			
+			res.setContentType(result.contentType());
+			res.setCharacterEncoding(result.characterEncoding());
+			res.getWriter().write(result.content());
+			
+			result.cookies().forEach(cookie -> res.addCookie(cookie));
+			result.headers().forEach((name, value) -> res.addHeader(name, value));
+		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+			throw new ServletException(e);
+		}
 	}
+	
+	// ----------------------------------------------------------------------- //
+	// Router implementation                                                   //
+	// ----------------------------------------------------------------------- //
 	
 	@Override
 	public void addController(Controller controller) {
+		Class<?> clazz = controller.getClass();
 		
+		if(this.controllers.stream().map(c -> c.getClass()).filter(cl -> cl == clazz).findAny().orElse(null) != null) {
+			return;
+		}
+		
+		this.controllers.add(controller);
+		
+		for(Method method : clazz.getMethods()) {
+			this.addRoute(method, controller);
+		}
 	}
 	
 	@Override
@@ -86,7 +187,9 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 			return;
 		}
 		
-		holder.setPathSpec(pathAnnotation.value());
+		Path controllerPath = controller.getClass().getAnnotation(Path.class);
+		
+		holder.setPathSpec(StringUtil.filterURL((controllerPath == null ? "" : controllerPath.value()) + pathAnnotation.value()));
 		holder.setRegex(this.pathResolver.compilePathSpec(pathAnnotation.value()));
 		
 		dev.teamnight.nightweb.core.mvc.annotations.Method methodAnnotation = method.getAnnotation(dev.teamnight.nightweb.core.mvc.annotations.Method.class);
@@ -168,38 +271,153 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 	}
 	
 	@Override
+	public PathResolver getPathResolver() {
+		return this.pathResolver;
+	}
+	
+	@Override
 	public String getPath(Controller controller) {
-		return "";
+		Path pathAnnotation = controller.getClass().getAnnotation(Path.class);
+		
+		if(pathAnnotation == null) {
+			return this.ctx.getContextPath();
+		}
+		
+		return StringUtil.filterURL(this.ctx.getContextPath() + pathAnnotation.value());
 	}
 	
 	@Override
 	public String getPath(Controller controller, Method method) {
-		return "";
+		MethodHolder holder = this.routes.stream().filter(h -> h.getMethod().equals(method)).findAny().orElse(null);
+		
+		if(holder == null) {
+			return null;
+		}
+		
+		return StringUtil.filterURL(this.ctx.getContextPath() + holder.getPathSpec());
 	}
 	
 	@Override
 	public String getPath(String controllerAndMethodName) {
-		return "";
+		List<String> contents = Arrays.stream(controllerAndMethodName.split("\\.")).collect(Collectors.toList());
+		
+		String methodName = contents.get(contents.size() - 1);
+		contents.remove(contents.size() - 1);
+		
+		String controllerName = String.join(".", contents);
+		
+		for(MethodHolder holder : this.routes) {
+			if(holder.getController().getClass().getCanonicalName().equals(controllerName)) {
+				if(holder.getMethod().getName().equals(methodName)) {
+					return StringUtil.filterURL(this.ctx.getContextPath() + holder.getPathSpec());
+				}
+			}
+		}
+		
+		return this.getContextPath();
 	}
 	
 	@Override
 	public Controller getControllerByURL(String url) {
+		MethodHolder holder = this.routes.stream().filter(h -> h.getRegex().matcher(url).matches()).findAny().orElse(null);
+		
+		Controller c = null;
+		
+		if(holder != null) {
+			c = holder.getController();
+		}
+		
+		if(c == null) {
+			for(Controller controller : this.controllers) {
+				Path path = controller.getClass().getAnnotation(Path.class);
+				if(path != null) {
+					Pattern p = this.pathResolver.compilePathSpec(path.value());
+					if(p.matcher(url).matches()) {
+						return controller;
+					}
+				}
+			}
+		}
+		
 		return null;
 	}
 	
 	@Override
-	public MethodHolder getMethodByURL(String url) {
-		return null;
+	public MethodHolder getMethodByURL(RouteQuery query) {
+		return this.routes.stream()
+				.filter(h -> h.getRegex().matcher(query.url()).matches())
+				.filter(h -> h.getHttpMethod().equalsIgnoreCase(query.method()))
+				.filter(h -> {
+					if(query.produces().isPresent()) {
+						if(h.getProduces().isPresent()) {
+							return h.getProduces().get().equalsIgnoreCase(query.produces().get());
+						} else {
+							return true;
+						}
+					} else {
+						return true;
+					}
+				})
+				.filter(h -> {
+					if(query.accepts().isPresent()) {
+						if(h.getAccepts().isPresent()) {
+							return h.getAccepts().get().equalsIgnoreCase(query.accepts().get());
+						} else {
+							return true;
+						}
+					} else {
+						return true;
+					}
+				})
+				.findAny()
+				.orElse(null);
 	}
 	
 	@Override
 	public Controller getController(String pathSpec) {
-		return null;
+		return this.controllers.stream()
+				.filter(c -> this.getPath(c).substring(this.getContextPath().length()).equals(pathSpec))
+				.findAny()
+				.orElse(null);
 	}
 	
 	@Override
-	public MethodHolder getMethod(String pathSpec) {
-		return null;
+	public MethodHolder getMethod(RouteQuery query) {
+		return this.routes.stream()
+				.filter(h -> h.getPathSpec().equals(query.url()))
+				.filter(h -> h.getHttpMethod().equalsIgnoreCase(query.method()))
+				.filter(h -> {
+					if(query.produces().isPresent()) {
+						if(h.getProduces().isPresent()) {
+							return h.getProduces().get().equalsIgnoreCase(query.produces().get());
+						} else {
+							return true;
+						}
+					} else {
+						return true;
+					}
+				})
+				.filter(h -> {
+					if(query.accepts().isPresent()) {
+						if(h.getAccepts().isPresent()) {
+							return h.getAccepts().get().equalsIgnoreCase(query.accepts().get());
+						} else {
+							return true;
+						}
+					} else {
+						return true;
+					}
+				})
+				.findAny()
+				.orElse(null);
+	}
+	
+	public boolean pathExists(String path) {
+		return this.routes.stream()
+				.filter(h -> h.getRegex().matcher(path).matches())
+				.findAny()
+				.orElse(null) 
+				!= null;
 	}
 
 }

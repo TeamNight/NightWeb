@@ -7,6 +7,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -15,8 +16,11 @@ import org.junit.Test;
 
 import dev.teamnight.nightweb.core.mvc.RequestParameter;
 import dev.teamnight.nightweb.core.mvc.Result;
+import dev.teamnight.nightweb.core.mvc.RouteQuery;
 import dev.teamnight.nightweb.core.mvc.Router;
 import dev.teamnight.nightweb.core.mvc.ServletRouterImpl;
+import dev.teamnight.nightweb.core.util.StringUtil;
+import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.mvc.Controller;
 import dev.teamnight.nightweb.core.mvc.MethodHolder;
 import dev.teamnight.nightweb.core.mvc.PathResolver;
@@ -28,6 +32,7 @@ import dev.teamnight.nightweb.core.mvc.PathResolver;
 public class RouterTest {
 
 	private PathResolver resolver = new PathResolver();
+	private Context ctx = new TestApplicationContext();
 	
 	@Test
 	public void testPathResolver() {
@@ -97,5 +102,34 @@ public class RouterTest {
 		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 			throw new AssertionError(e);
 		}
+	}
+	
+	@Test
+	public void otherTests() throws NoSuchMethodException, SecurityException {
+		Router router = new ServletRouterImpl(this.ctx);
+		
+		Controller c = new TestController(null);
+		
+		try {
+			router.addRoute(c.getClass().getMethod("testAction", String.class), c);
+		} catch (NoSuchMethodException | SecurityException e) {
+			throw new AssertionError(e);
+		}	
+		
+		assertTrue("Context path not /", router.getContextPath().equals("/"));
+		assertTrue("Controller path not /", router.getPath(c).equals("/"));
+		assertTrue("Method Path not /api/test/:test", router.getPath(c, c.getClass().getMethod("testAction", String.class)).equals("/api/test/:test"));
+		assertTrue("ControllerAndMethodName Path not /api/test/:test", router.getPath("dev.teamnight.TestController.testAction").equals("/api/test/:test"));
+		assertTrue("MetholdHolder null", router.getMethod(RouteQuery.of("/api/test/:test")) != null);
+		assertTrue("MetholdHolder null", router.getMethodByURL(RouteQuery.of("/api/test/testString")) != null);
+	}
+	
+	@Test
+	public void acceptHeaderParsingTest() {
+		List<String> acceptHeaders = StringUtil.parseAcceptHeader("text/html,application/html+xml;q=0.5");
+		
+		assertTrue("acceptHeaders size not 2", acceptHeaders.size() == 2);
+		assertTrue("text/html not first", acceptHeaders.get(0).equalsIgnoreCase("text/html"));
+		assertTrue("application/html+xml not second", acceptHeaders.get(1).equalsIgnoreCase("application/html+xml"));
 	}
 }

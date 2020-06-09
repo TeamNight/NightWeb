@@ -38,6 +38,10 @@ public class PathResolver {
 	}
 	
 	public Pattern compilePathSpec(String pathSpec) {
+		if(pathSpec.endsWith("/")) {
+			pathSpec = pathSpec.substring(0, pathSpec.length() - 1);
+		}
+		
 		Matcher m = this.paramPattern.matcher(pathSpec);
 		
 		StringBuilder sb = new StringBuilder(pathSpec);
@@ -73,6 +77,13 @@ public class PathResolver {
 		}
 		
 		return params;
+	}
+	
+	/**
+	 * @return the varPattern
+	 */
+	public static String getVariablePattern() {
+		return VAR_PATTERN;
 	}
 	
 }

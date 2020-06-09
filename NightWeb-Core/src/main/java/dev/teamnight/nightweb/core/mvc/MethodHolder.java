@@ -89,10 +89,12 @@ public class MethodHolder {
 		Object result = this.invokeMethod.invoke(this.controller, args);
 		
 		if(result instanceof Result) {
-			return (Result) result;
-		} else {
-			return new Result().status(200).content("No Result was returned, maybe the return type is void?");
+			if(result != null) {
+				return (Result) result;
+			}
 		}
+		
+		return new Result().status(200).content("No Result was returned, maybe the return type is void?");
 	}
 	
 	/**
