@@ -53,6 +53,8 @@ public class Group implements Comparable<Group>, PermissionOwner<GroupPermission
 	@OrderBy("name ASC")
 	private List<GroupPermission> permissions = new ArrayList<GroupPermission>();
 	
+	private transient long memberSize = 0;
+	
 	protected Group() {}
 	
 	public Group(String name) {
@@ -123,6 +125,13 @@ public class Group implements Comparable<Group>, PermissionOwner<GroupPermission
 	public String getBannerText() {
 		return bannerText;
 	}
+	
+	/**
+	 * @return the memberSize
+	 */
+	public long getMemberSize() {
+		return memberSize;
+	}
 
 	/**
 	 * @param id the id to set
@@ -164,6 +173,13 @@ public class Group implements Comparable<Group>, PermissionOwner<GroupPermission
 	 */
 	public void setBannerText(String bannerText) {
 		this.bannerText = bannerText;
+	}
+	
+	/**
+	 * @param memberSize the memberSize to set
+	 */
+	public void setMemberSize(long memberSize) {
+		this.memberSize = memberSize;
 	}
 	
 	// ----------------------------------------------------------------------- //

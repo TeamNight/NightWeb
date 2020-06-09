@@ -25,9 +25,10 @@ import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.AuthenticatorFactory;
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightModule;
-import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.annotations.AdminServlet;
 import dev.teamnight.nightweb.core.annotations.Authenticated;
+import dev.teamnight.nightweb.core.annotations.IgnoreForceLogin;
+import dev.teamnight.nightweb.core.entities.ApplicationData;
 import dev.teamnight.nightweb.core.service.ApplicationService;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 import dev.teamnight.nightweb.core.template.TemplateBuilder;
@@ -35,19 +36,10 @@ import dev.teamnight.nightweb.core.template.TemplateManager;
 
 public class JettyApplicationContext implements ApplicationContext {
 
-	private FilterHolder adminAuthenticationFilter = new FilterHolder(
-			new AdminAuthenticationFilter(
-					this,
-					NightWeb.getServiceManager().getService(ApplicationService.class).getByIdentifier("dev.teamnight.nightweb.core")
-					)
-			);
-	
-	private FilterHolder authenticationFilter = new FilterHolder(
-			new AuthenticationFilter(
-					this,
-					NightWeb.getServiceManager().getService(ApplicationService.class).getByIdentifier("dev.teamnight.nightweb.core")
-					)
-			);
+	private ApplicationData coreData;
+	private FilterHolder adminAuthenticationFilter;
+	private FilterHolder authenticationFilter;
+	private FilterHolder requestFilter;
 	
 	private final ServletContextHandler handler;
 	private final SessionFactory factory;
@@ -67,6 +59,13 @@ public class JettyApplicationContext implements ApplicationContext {
 		this.authFactory = auth;
 		this.serviceManager = serviceManager;
 		this.templateManager = templateManager;
+		
+		this.coreData = this.getServiceManager().getService(ApplicationService.class).getByIdentifier("dev.teamnight.nightweb.core");
+		this.adminAuthenticationFilter = new FilterHolder(new AdminAuthenticationFilter(this, this.coreData));
+		this.authenticationFilter = new FilterHolder(new AuthenticationFilter(this, this.coreData));
+		this.requestFilter = new FilterHolder(new RequestFilter(this, this.coreData));
+		
+		this.handler.addFilter(this.requestFilter, "/*", EnumSet.allOf(DispatcherType.class));
 	}
 	
 	@Override
@@ -120,6 +119,9 @@ public class JettyApplicationContext implements ApplicationContext {
 				this.handler.addFilter(authenticationFilter, pathSpec, EnumSet.allOf(DispatcherType.class));
 			} else if(annotation instanceof AdminServlet) {
 				this.handler.addFilter(adminAuthenticationFilter, pathSpec, EnumSet.allOf(DispatcherType.class));
+			} else if(annotation instanceof IgnoreForceLogin) {
+				RequestFilter filter = (RequestFilter) this.requestFilter.getFilter();
+				filter.addIgnoreForceLoginPath(pathSpec);
 			}
 		}
 		

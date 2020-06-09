@@ -4,8 +4,8 @@
 package dev.teamnight.nightweb.core.entities;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -22,6 +22,7 @@ import javax.persistence.Table;
 
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
+import org.hibernate.annotations.Where;
 
 /**
  * @author Jonas
@@ -40,6 +41,7 @@ public class Menu {
 	private String identifier;
 	
 	@OneToMany(fetch = FetchType.EAGER, mappedBy = "menu", cascade = CascadeType.ALL, orphanRemoval = true)
+	@Where(clause = "parentId = null")
 	@OrderBy("order ASC")
 	private List<MenuItem> nodes = new ArrayList<MenuItem>();
 	
@@ -73,7 +75,7 @@ public class Menu {
 	 * @return the nodes
 	 */
 	public List<MenuItem> getNodes() {
-		return Collections.unmodifiableList(nodes);
+		return nodes.stream().filter(node -> node.getParentItem() == null).collect(Collectors.toUnmodifiableList());
 	}
 	
 	/**

@@ -11,6 +11,7 @@ import org.hibernate.SessionFactory;
 import org.hibernate.query.Query;
 
 import dev.teamnight.nightweb.core.entities.Group;
+import dev.teamnight.nightweb.core.entities.User;
 
 public class GroupService extends AbstractService<Group> {
 
@@ -61,5 +62,18 @@ public class GroupService extends AbstractService<Group> {
 		session.getTransaction().commit();
 		
 		return groups;
+	}
+	
+	public long getUserCount(Group group) {
+		Session session = this.factory().getCurrentSession();
+		session.beginTransaction();
+		
+		Query<Long> query = session.createQuery("SELECT count(U) FROM " + User.class.getCanonicalName() + " U WHERE :group member of U.groups", Long.class);
+		query.setParameter("group", group);
+		
+		Long count = query.getSingleResult();
+		session.getTransaction().commit();
+		
+		return count;
 	}
 }

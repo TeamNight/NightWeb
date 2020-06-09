@@ -16,12 +16,12 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlet.Source;
 
 import dev.teamnight.nightweb.core.Context;
-import dev.teamnight.nightweb.core.NightWeb;
 
 /**
  * @author Jonas
- *
+ * @deprecated will be removed in version 0.3
  */
+@Deprecated
 public class NightJettyServletHolder extends ServletHolder {
 
 	private Context ctx;
@@ -44,16 +44,6 @@ public class NightJettyServletHolder extends ServletHolder {
 	@Override
 	public void handle(Request baseRequest, ServletRequest request, ServletResponse response)
 			throws ServletException, UnavailableException, IOException {
-		if(this.ctx == null) {
-			throw new IllegalStateException("Context was not set");
-		}
-		
-		if(NightWeb.getCoreApplication().isDebugModeEnabled()) {
-			this.ctx.getTemplateManager().clearTemplateCache();
-		}
-		
-		request.setAttribute("context", this.ctx);
-		
 		super.handle(baseRequest, request, response);
 	}
 }

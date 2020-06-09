@@ -3,9 +3,11 @@
  */
 package dev.teamnight.nightweb.core.entities;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -66,8 +68,8 @@ public class MenuItem {
 	@JoinColumn(name = "parentId")
 	private MenuItem parentItem;
 	
-	@OneToMany(fetch = FetchType.EAGER, mappedBy = "parentItem", orphanRemoval = true)
-	private List<MenuItem> children;
+	@OneToMany(fetch = FetchType.EAGER, mappedBy = "parentItem", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<MenuItem> children = new ArrayList<MenuItem>();
 	
 	@ManyToOne(optional = false)
 	@JoinColumn(name = "menuId")
@@ -177,7 +179,15 @@ public class MenuItem {
 	 * @return the menu
 	 */
 	public Menu getMenu() {
-		return menu;
+		if(this.menu == null) {
+			if(this.parentItem != null) {
+				return this.parentItem.getMenu();
+			} else {
+				return null;
+			}
+		} else {
+			return this.menu;
+		}
 	}
 	
 	/**
@@ -252,6 +262,7 @@ public class MenuItem {
 	
 	public void addChild(MenuItem child) {
 		MenuItem item = this.children.stream()
+				.filter(ch -> child.getId() != 0)
 				.filter(ch -> ch.getId() == child.getId())
 				.findAny()
 				.orElse(null);

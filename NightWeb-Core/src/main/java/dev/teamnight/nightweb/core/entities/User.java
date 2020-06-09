@@ -21,6 +21,7 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.NamedEntityGraph;
@@ -28,8 +29,11 @@ import javax.persistence.NamedAttributeNode;
 import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
 import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 
 import org.apache.logging.log4j.LogManager;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import dev.teamnight.nightweb.core.entities.Permission.Tribool;
 
@@ -71,7 +75,12 @@ public class User implements PermissionOwner<UserPermission> {
 	private String recoveryKey;
 	
 	@ManyToMany
-	@JoinTable(name = "user_groups")
+	@OnDelete(action = OnDeleteAction.CASCADE)
+	@JoinTable(
+			name = "user_groups",
+			joinColumns = @JoinColumn(name = "userId"),
+			inverseJoinColumns = @JoinColumn(name = "groupId"),
+			uniqueConstraints = @UniqueConstraint(columnNames = {"userId", "groupId"}))
 	private List<Group> groups = new ArrayList<Group>();
 	
 	@OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "user")

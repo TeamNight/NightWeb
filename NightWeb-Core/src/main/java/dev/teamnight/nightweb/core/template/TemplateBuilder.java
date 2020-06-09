@@ -43,12 +43,25 @@ public class TemplateBuilder {
 		return tmpMan;
 	}
 	
+	/**
+	 * Assigns a java object to a variable in the freemarker template
+	 * @param String the variable name
+	 * @param Object the object to be assigned
+	 * @return the TemplateBuilder instance
+	 */
 	public TemplateBuilder assign(String var, Object obj) {
 		this.replacements.put(var, obj);
 		
 		return this;
 	}
 	
+	/**
+	 * Assigns a java object to a variable in the freemarker template depending that the condition resolves to true
+	 * @param String the variable name
+	 * @param Object the object to be assigned
+	 * @param Boolean the condition
+	 * @return the TemplateBuilder instance
+	 */
 	public TemplateBuilder assignWithCond(String var, Object obj, boolean condition) {
 		if(condition)
 			this.assign(var, obj);
@@ -56,6 +69,11 @@ public class TemplateBuilder {
 		return this;
 	}
 	
+	/**
+	 * Removes a variable from the assignments
+	 * @param var
+	 * @return
+	 */
 	public TemplateBuilder remove(String var) {
 		this.replacements.remove(var);
 		
@@ -80,10 +98,18 @@ public class TemplateBuilder {
 		return this.assign("message", new AlertMessage(msg, Type.SUCCESS));
 	}
 	
+	/**
+	 * @return the Template
+	 */
 	public Template getTemplate() {
 		return this.temp;
 	}
 	
+	/**
+	 * Builds the template
+	 * @return String the processed Template
+	 * @throws TemplateProcessException if an {@link IOException} or {@link TemplateException} occurs
+	 */
 	public String build() throws TemplateProcessException {
 		if(this.temp != null) {
 			Template temp = this.getTemplate();
@@ -105,6 +131,12 @@ public class TemplateBuilder {
 		}
 	}
 	
+	/**
+	 * Builds the template and writes it to the HttpServletResposne
+	 * @param HttpServletResponse the Response
+	 * @throws TemplateProcessException @see {@link TemplateBuilder#build()}
+	 * @throws IOException if the response could not be written to the response
+	 */
 	public void send(HttpServletResponse resp) throws TemplateProcessException, IOException {
 		resp.getWriter().write(this.build());
 	}

@@ -76,6 +76,7 @@ import dev.teamnight.nightweb.core.servlets.RegistrationServlet;
 import dev.teamnight.nightweb.core.servlets.TestServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminDashboardServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminDevAutoLoginServlet;
+import dev.teamnight.nightweb.core.servlets.admin.AdminGroupListServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminLoginServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminModuleEditServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminModuleInstallListServlet;
@@ -322,6 +323,8 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	 * @param moduleData
 	 */
 	private void createDefaultMenus(ModuleData moduleData) {
+		MenuService menuServ = this.serviceMan.getService(MenuService.class);
+		
 		Menu mainMenu = new Menu("dev.teamnight.nightweb.core.mainMenu", moduleData);
 		MenuItem homeItem = new MenuItem(mainMenu, MenuItem.Type.LINK, "dev.teamnight.nightweb.core.mainMenu.root", null, null, "/", 1, null);
 		//MenuItem articlesItem = new MenuItem(null, MenuItem.Type.LINK, "dev.teamnight.nightweb.core.mainMenu.articles", null, null/*TODO: Replace by ArticlesListServlet*/, null, 1, null);
@@ -332,14 +335,18 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		MenuItem dashboardItem = new MenuItem(acpMenu, MenuItem.Type.LINK, "dev.teamnight.nightweb.core.adminMenu.root", null, AdminDashboardServlet.class.getName(), null, 1, null);
 		MenuItem settingsItem = new MenuItem(acpMenu, MenuItem.Type.LINK, "dev.teamnight.nightweb.core.adminMenu.settings", null, AdminSettingsServlet.class.getName(), null, 2, null);
 		MenuItem modulesItem = new MenuItem(acpMenu, MenuItem.Type.LINK, "dev.teamnight.nightweb.core.adminMenu.modules", null, AdminModuleListServlet.class.getName(), null, 3, null);
-		MenuItem usersItem = new MenuItem(acpMenu, MenuItem.Type.LINK, "dev.teamnight.nightweb.core.adminMenu.users", null, AdminUserListServlet.class.getName(), null, 4, null);
+		MenuItem usersItem = new MenuItem(acpMenu, MenuItem.Type.DROPDOWN, "dev.teamnight.nightweb.core.adminMenu.user", null, null, "#", 4, null);
+			MenuItem usersUserItem = new MenuItem(acpMenu, MenuItem.Type.LINK, "dev.teamnight.nightweb.core.adminMenu.user.users", null, AdminUserListServlet.class.getName(), null, 1, null);
+			MenuItem usersGroupItem = new MenuItem(acpMenu, MenuItem.Type.LINK, "dev.teamnight.nightweb.core.adminMenu.user.groups", null, AdminGroupListServlet.class.getName(), null, 2, null);
+			usersItem.addChild(usersUserItem);
+			usersItem.addChild(usersGroupItem);
 		
 		acpMenu.addNode(dashboardItem);
 		acpMenu.addNode(settingsItem);
 		acpMenu.addNode(modulesItem);
 		acpMenu.addNode(usersItem);
 		
-		this.serviceMan.getService(MenuService.class).create(mainMenu, acpMenu);
+		menuServ.create(mainMenu, acpMenu);
 	}
 
 	private void createDefaultSettings(ModuleData data) {
@@ -554,6 +561,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		ctx.registerServlet(AdminUserEnableServlet.class, "/admin/user/enable/*");
 		ctx.registerServlet(AdminUserUnbanServlet.class, "/admin/user/unban/*");
 		ctx.registerServlet(AdminUserPermissionsEditServlet.class, "/admin/user/permissions/*");
+		ctx.registerServlet(AdminGroupListServlet.class, "/admin/usergroups/*");
 		
 		//Test
 		ctx.registerServlet(TestServlet.class, "/test");

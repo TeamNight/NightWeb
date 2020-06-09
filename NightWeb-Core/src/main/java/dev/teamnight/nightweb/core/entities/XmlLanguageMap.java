@@ -12,6 +12,9 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+
+import org.apache.logging.log4j.LogManager;
+
 import dev.teamnight.nightweb.core.template.FormattableString;
 
 /**
@@ -75,6 +78,9 @@ public class XmlLanguageMap {
 		if(item != null) {
 			return new FormattableString(item.getValue());
 		}
+		
+		LogManager.getLogger().debug("Null value in languageMap " + this.getLanguageCode() + " for: " + key);
+		
 		return null;
 	}
 	

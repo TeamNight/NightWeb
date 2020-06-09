@@ -7,6 +7,7 @@ module dev.teamnight.nightweb.core {
 	exports dev.teamnight.nightweb.core.exceptions;
 	exports dev.teamnight.nightweb.core.annotations;
 	exports dev.teamnight.nightweb.core.util;
+	exports dev.teamnight.nightweb.core.mvc;
 	
 	//Export to jetty in order for jetty to use the servlets
 	exports dev.teamnight.nightweb.core.servlets 
