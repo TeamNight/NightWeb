@@ -48,6 +48,7 @@ public class MethodHolder {
 		this.ctx = ctx;
 		this.invokeMethod = invokeMethod;
 		this.controller = controller;
+		this.produces = "text/html";
 	}
 	
 	public Result executeMethod(HttpServletRequest req, HttpServletResponse res, Map<RequestParameter, String> parameters) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
@@ -86,15 +87,25 @@ public class MethodHolder {
 			args[pos] = entry.getValue();
 		}
 		
-		Object result = this.invokeMethod.invoke(this.controller, args);
+		Object value = this.invokeMethod.invoke(this.controller, args);
 		
-		if(result instanceof Result) {
-			if(result != null) {
-				return (Result) result;
+		Result result = null;
+		
+		if(value instanceof Result) {
+			if(value != null) {
+				result = (Result) value;
 			}
 		}
 		
-		return new Result().status(200).content("No Result was returned, maybe the return type is void?");
+		if(result == null) {
+			result = new Result().status(200).content("No Result was returned, maybe the return type is void?");
+		}
+		
+		if(this.produces != null) {
+			result.contentType(this.produces);
+		}
+		
+		return result;
 	}
 	
 	/**

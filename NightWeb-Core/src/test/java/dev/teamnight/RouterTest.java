@@ -6,12 +6,18 @@ package dev.teamnight;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.eclipse.jetty.server.Request;
 import org.junit.Test;
 
 import dev.teamnight.nightweb.core.mvc.RequestParameter;
@@ -131,5 +137,47 @@ public class RouterTest {
 		assertTrue("acceptHeaders size not 2", acceptHeaders.size() == 2);
 		assertTrue("text/html not first", acceptHeaders.get(0).equalsIgnoreCase("text/html"));
 		assertTrue("application/html+xml not second", acceptHeaders.get(1).equalsIgnoreCase("application/html+xml"));
+	}
+	
+	@Test
+	public void routingTest() {
+		HttpServletRequest req = this.createMockRequest("/api/test/testString", "GET", "text/html,application/json;q=0.9");
+		HttpServletResponse res = new MockResponse();
+		
+		Router router = new ServletRouterImpl(this.ctx);
+		
+		Controller c = new TestController(null);
+		
+		try {
+			router.addRoute(c.getClass().getMethod("testAction", String.class), c);
+		} catch (NoSuchMethodException | SecurityException e) {
+			throw new AssertionError(e);
+		}
+		
+		ServletRouterImpl servlet = (ServletRouterImpl) router;
+		
+		try {
+			servlet.service(req, res);
+		} catch (ServletException | IOException | NullPointerException e) {
+			e.printStackTrace();
+			throw new AssertionError(e);
+		}
+		
+		System.out.println("MockResponse --\nStatus: " + res.getStatus());
+		System.out.println("Message: " + ((MockResponse)res).getErrorMsg());
+		System.out.println("Content-Type: " + res.getContentType());
+		System.out.println("Character Encoding: "+ res.getCharacterEncoding());
+	}
+	
+	public HttpServletRequest createMockRequest(String url, String httpMethod, String acceptHeader) {
+		MockRequest req = new MockRequest(url, httpMethod, "");
+		req.addHeader("User-Agent", "Mock-Client");
+		req.addHeader("Host", "localhost");
+		req.addHeader("Accept-Language", "en-us");
+		req.addHeader("Accept", "text/html,application/json;q=0.9");
+		req.addHeader("Accept-Encoding", "gzip, deflate, utf-8");
+		req.addHeader("Connection", "Keep-Alive");
+		
+		return req;
 	}
 }

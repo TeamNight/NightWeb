@@ -68,10 +68,15 @@ public class PathResolver {
 		
 		for(RequestParameter parameter : parameters) {
 			if(!parameter.isURLParameter()) {
-				throw new IllegalArgumentException("all parameters need isURLParameter to be true");
+				throw new IllegalArgumentException("The parameter " + parameter.getName() + " needs isURLParamter to be true");
 			}
 
-			String value = matcher.group(parameter.getName());
+			String value = null;
+			try {
+				value = matcher.group(parameter.getName());
+			} catch(IllegalArgumentException e) {
+				throw new IllegalArgumentException("No param was defined in the pathSpec for " + parameter.getName());
+			}
 			
 			params.put(parameter, value);
 		}

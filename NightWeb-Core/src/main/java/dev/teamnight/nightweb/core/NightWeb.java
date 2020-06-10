@@ -9,6 +9,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
 
+import com.google.gson.Gson;
+
 import dev.teamnight.nightweb.core.entities.ErrorLogEntry;
 import dev.teamnight.nightweb.core.events.EventManager;
 import dev.teamnight.nightweb.core.service.ErrorLogService;
@@ -66,6 +68,10 @@ public final class NightWeb {
 
 	public static PermissionService getPermissionService() {
 		return core.getPermissionService();
+	}
+	
+	public static Gson getGson() {
+		return core.getGson();
 	}
 	
 	public static void logError(Throwable error, Class<?> exceptionLocation) {

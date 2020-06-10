@@ -16,6 +16,8 @@ import dev.teamnight.nightweb.core.ApplicationContext;
 import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightModule;
+import dev.teamnight.nightweb.core.mvc.Controller;
+import dev.teamnight.nightweb.core.mvc.Router;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 import dev.teamnight.nightweb.core.template.TemplateBuilder;
 import dev.teamnight.nightweb.core.template.TemplateManager;
@@ -99,6 +101,18 @@ public class TestApplicationContext implements ApplicationContext {
 
 	@Override
 	public void registerServletHolder(ServletHolder holder, String pathSpec) {
+	}
+
+	@Override
+	public void addController(Controller controller) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public Router getRouter() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

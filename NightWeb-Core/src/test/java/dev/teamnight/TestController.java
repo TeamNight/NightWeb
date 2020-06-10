@@ -27,7 +27,7 @@ public class TestController extends Controller {
 	
 	@GET
 	@Produces("text/html")
-	@Accepts("*")
+	@Accepts("*/*")
 	@Path("/api/test/:test")
 	public Result testAction(@PathParam("test") String test) {
 		return ok("test var is: " + test);

@@ -28,6 +28,7 @@ import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.http.HttpStatus;
 
 import dev.teamnight.nightweb.core.Context;
+import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.mvc.annotations.Accepts;
 import dev.teamnight.nightweb.core.mvc.annotations.GET;
 import dev.teamnight.nightweb.core.mvc.annotations.POST;
@@ -85,7 +86,8 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 		String url = req.getPathInfo();
 		
 		if(!this.pathExists(url)) {
-			res.sendError(HttpStatus.NOT_FOUND_404, "The path <b>" + req.getRequestURI() + "<b> was not found.");
+			res.sendError(HttpStatus.NOT_FOUND_404, "The request url <b>" + req.getRequestURI() + "</b> was not found.");
+			return;
 		}
 		
 		RouteQuery query = RouteQuery.of(url).method(req.getMethod());
@@ -94,18 +96,22 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 		
 		if(this.getMethodByURL(query) == null) {
 			res.sendError(HttpStatus.METHOD_NOT_ALLOWED_405, "The method " + query.method() + " is not allowed for the path <b>" + req.getRequestURI() + "</b>.");
+			return;
 		}
 		
-		List<String> acceptHeaders = StringUtil.parseAcceptHeader(req.getHeader("Accept"));
+		query.accepts(req.getContentType());
+		
+		List<String> acceptHeaders = StringUtil.parseAcceptHeader(req.getHeader("Accept") == null ? "" : req.getHeader("Accept"));
 		
 		if(!acceptHeaders.isEmpty()) {
-			int i = 0;
-			String acceptHeader = acceptHeaders.get(i);
-			
-			while(holder == null) {
+			for(String acceptHeader : acceptHeaders) {
 				query.produces(acceptHeader);
 				
 				holder = this.getMethodByURL(query);
+				
+				if(holder != null) {
+					break;
+				}
 			}
 		} else {
 			holder = this.getMethodByURL(query);
@@ -113,15 +119,19 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 		
 		if(holder == null) {
 			res.sendError(HttpStatus.BAD_REQUEST_400, "The Accept-Headers are not allowed for <b>" + req.getRequestURI() + "</b>.");
+			return;
 		}
 		
-		if(holder.getAccepts().isPresent()) {
+		if(holder.getAccepts().isPresent()
+				&& !holder.getAccepts().get().equalsIgnoreCase("*/*")) {
 			if(req.getContentType() == null) {
 				res.sendError(HttpStatus.BAD_REQUEST_400, "Request Content-Type is not allowed");
+				return;
 			}
 			
 			if(!holder.getAccepts().get().equalsIgnoreCase(req.getContentType())) {
 				res.sendError(HttpStatus.BAD_REQUEST_400, "Request Content-Type is not allowed");
+				return;
 			}
 		}
 		
@@ -143,8 +153,11 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 				return;
 			}
 			
-			//TODO: parse JSON or else
+			if(result.contentType().equalsIgnoreCase("application/json")) {
+				result.content(NightWeb.getGson().toJson(result.data()));
+			}
 			
+			res.setStatus(result.status());
 			res.setContentType(result.contentType());
 			res.setCharacterEncoding(result.characterEncoding());
 			res.getWriter().write(result.content());
@@ -369,7 +382,7 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 						return true;
 					}
 				})
-				.findAny()
+				.findFirst()
 				.orElse(null);
 	}
 	
@@ -408,7 +421,7 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 						return true;
 					}
 				})
-				.findAny()
+				.findFirst()
 				.orElse(null);
 	}
 	

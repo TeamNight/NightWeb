@@ -29,6 +29,9 @@ import dev.teamnight.nightweb.core.annotations.AdminServlet;
 import dev.teamnight.nightweb.core.annotations.Authenticated;
 import dev.teamnight.nightweb.core.annotations.IgnoreForceLogin;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
+import dev.teamnight.nightweb.core.mvc.Controller;
+import dev.teamnight.nightweb.core.mvc.Router;
+import dev.teamnight.nightweb.core.mvc.ServletRouterImpl;
 import dev.teamnight.nightweb.core.service.ApplicationService;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 import dev.teamnight.nightweb.core.template.TemplateBuilder;
@@ -47,6 +50,7 @@ public class JettyApplicationContext implements ApplicationContext {
 	private final ServiceManager serviceManager;
 	private final TemplateManager templateManager; //TODO maybe change this two to NightWebCore in order to be available all the time
 	private Application application;
+	private ServletRouterImpl router;
 	
 	/**
 	 * @param handler
@@ -64,6 +68,9 @@ public class JettyApplicationContext implements ApplicationContext {
 		this.adminAuthenticationFilter = new FilterHolder(new AdminAuthenticationFilter(this, this.coreData));
 		this.authenticationFilter = new FilterHolder(new AuthenticationFilter(this, this.coreData));
 		this.requestFilter = new FilterHolder(new RequestFilter(this, this.coreData));
+		
+		this.router = new ServletRouterImpl(this);
+		this.handler.addServlet(new ServletHolder(this.router), "/*");
 		
 		this.handler.addFilter(this.requestFilter, "/*", EnumSet.allOf(DispatcherType.class));
 	}
@@ -177,6 +184,16 @@ public class JettyApplicationContext implements ApplicationContext {
 	private void registerServlet(ServletHolder holder, String pathSpec) {
 		holder.setName(holder.getHeldClass().getName());
 		this.handler.addServlet(holder, pathSpec);
+	}
+	
+	@Override
+	public void addController(Controller controller) {
+		this.getRouter().addController(controller);
+	}
+	
+	@Override
+	public Router getRouter() {
+		return this.router;
 	}
 
 	@Override

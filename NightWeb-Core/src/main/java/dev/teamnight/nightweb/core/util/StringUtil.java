@@ -4,6 +4,7 @@
 package dev.teamnight.nightweb.core.util;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -65,6 +66,10 @@ public final class StringUtil {
 	}
 	
 	public static List<String> parseAcceptHeader(String acceptHeader) {
+		if(acceptHeader == null || acceptHeader.isBlank()) {
+			return Collections.emptyList();
+		}
+		
 		return Arrays.stream(acceptHeader.split(",")).sorted((a, b) -> {
 			double aPriority = 1.0;
 			double bPriority = 1.0;

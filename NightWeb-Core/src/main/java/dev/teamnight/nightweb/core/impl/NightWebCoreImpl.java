@@ -31,6 +31,9 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 import dev.teamnight.nightweb.core.Application;
 import dev.teamnight.nightweb.core.ApplicationContext;
 import dev.teamnight.nightweb.core.NightModule;
@@ -59,6 +62,7 @@ import dev.teamnight.nightweb.core.entities.SystemSetting;
 import dev.teamnight.nightweb.core.module.JavaModuleLoader;
 import dev.teamnight.nightweb.core.module.ModuleManager;
 import dev.teamnight.nightweb.core.module.ModuleManagerImpl;
+import dev.teamnight.nightweb.core.mvc.TestController;
 import dev.teamnight.nightweb.core.service.ApplicationService;
 import dev.teamnight.nightweb.core.service.ErrorLogService;
 import dev.teamnight.nightweb.core.service.GroupService;
@@ -116,6 +120,8 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	private EventManager eventManager;
 
 	private XmlConfiguration config;
+	
+	private Gson gson;
 	
 	public NightWebCoreImpl() {
 		//Initializing some things
@@ -186,6 +192,12 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 			ctx.updateLoggers();
 			LOGGER.debug(">>>>> Enabled debug messages for all loggers <<<<<");
 		}
+		
+		//Create gson instance
+		this.gson = new GsonBuilder()
+				.setPrettyPrinting()
+				.registerTypeAdapter(byte[].class, new GsonByteArrayToBase64Adapter())
+				.create();
 		
 		//Check for hibernate config and copy it if it not exists
 		if(!Files.exists(hibernateConfigPath, LinkOption.NOFOLLOW_LINKS)) {
@@ -566,6 +578,8 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		//Test
 		ctx.registerServlet(TestServlet.class, "/test");
 		ctx.registerServlet(AdminDevAutoLoginServlet.class, "/admin/autologin");
+		
+		ctx.addController(new TestController(ctx));
 	}
 	
 	// ----------------------------------------------------------------------- //
@@ -672,6 +686,11 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	@Override
 	public ModuleData getModuleData(NightModule module) {
 		return this.moduleManager.getData(module.getIdentifier());
+	}
+
+	@Override
+	public Gson getGson() {
+		return this.gson;
 	}
 
 }

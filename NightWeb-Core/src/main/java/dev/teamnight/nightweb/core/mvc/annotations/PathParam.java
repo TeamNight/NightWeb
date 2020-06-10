@@ -19,6 +19,4 @@ public @interface PathParam {
 
 	String value();
 	
-	boolean required() default true;
-	
 }

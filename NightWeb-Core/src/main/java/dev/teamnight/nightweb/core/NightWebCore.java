@@ -7,6 +7,8 @@ import java.util.List;
 
 import javax.servlet.http.HttpSession;
 
+import com.google.gson.Gson;
+
 import dev.teamnight.nightweb.core.entities.ModuleData;
 import dev.teamnight.nightweb.core.events.EventManager;
 import dev.teamnight.nightweb.core.service.GroupService;
@@ -138,4 +140,10 @@ public interface NightWebCore {
 	 * @return
 	 */
 	public ModuleData getModuleData(NightModule module);
+	
+	/**
+	 * Gets the global gson instance
+	 * @return
+	 */
+	public Gson getGson();
 }

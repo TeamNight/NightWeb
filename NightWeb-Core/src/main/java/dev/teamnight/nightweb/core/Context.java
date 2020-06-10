@@ -11,6 +11,8 @@ import javax.servlet.http.HttpSession;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.Session;
 
+import dev.teamnight.nightweb.core.mvc.Controller;
+import dev.teamnight.nightweb.core.mvc.Router;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 import dev.teamnight.nightweb.core.template.TemplateBuilder;
 import dev.teamnight.nightweb.core.template.TemplateManager;
@@ -27,6 +29,7 @@ public interface Context {
 	 * @return
 	 */
 	public Context getParent();
+	
 	/**
 	 * Registers a servlet in the handler of the ApplicationContext.
 	 * Modules do not get an own ContextHandler.
@@ -48,6 +51,19 @@ public interface Context {
 	 * @param pathInfo
 	 */
 	public void registerServlet(Class<? extends HttpServlet> servlet, String pathSpec);
+	
+	/**
+	 * Registers a controller in the router
+	 * 
+	 * @param {@link dev.teamnight.nightweb.core.mvc.Controller} controller
+	 */
+	public void addController(Controller controller);
+	/**
+	 * The router instance for this context
+	 * 
+	 * @return {@link dev.teamnight.nightweb.core.mvc.Router} the router
+	 */
+	public Router getRouter();
 	
 	/**
 	 * Returns the global Service Manager containing all registered services.

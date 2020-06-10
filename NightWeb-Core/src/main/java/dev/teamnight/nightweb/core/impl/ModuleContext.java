@@ -16,6 +16,8 @@ import dev.teamnight.nightweb.core.ApplicationContext;
 import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightModule;
+import dev.teamnight.nightweb.core.mvc.Controller;
+import dev.teamnight.nightweb.core.mvc.Router;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 import dev.teamnight.nightweb.core.template.TemplateBuilder;
 import dev.teamnight.nightweb.core.template.TemplateManager;
@@ -56,6 +58,16 @@ public class ModuleContext implements Context {
 	@Override
 	public void registerServlet(Class<? extends HttpServlet> servlet, String pathInfo) {
 		this.appContext.registerServlet(servlet, pathInfo, this);
+	}
+	
+	@Override
+	public void addController(Controller controller) {
+		this.appContext.addController(controller);
+	}
+	
+	@Override
+	public Router getRouter() {
+		return this.appContext.getRouter();
 	}
 
 	@Override
