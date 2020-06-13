@@ -28,7 +28,6 @@ public interface ApplicationContext extends Context {
 	/**
 	 * Registers a servlet holder
 	 * 
-	 * <p>WARNING: Only NightJettyServletHolder supports the session mechanic, if you need this, copy the source files.</p>
 	 * @param holder
 	 * @param pathSpec
 	 */

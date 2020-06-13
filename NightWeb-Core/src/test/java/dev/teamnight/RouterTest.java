@@ -60,7 +60,7 @@ public class RouterTest {
 	
 	@Test
 	public void addRouteTest() {
-		Router router = new ServletRouterImpl(null);
+		Router router = new ServletRouterImpl(null, null, null);
 		
 		Controller c = new TestController(null);
 		
@@ -83,7 +83,7 @@ public class RouterTest {
 	
 	@Test
 	public void invokeTest() {
-		Router router = new ServletRouterImpl(null);
+		Router router = new ServletRouterImpl(null, null, null);
 		
 		Controller c = new TestController(null);
 		
@@ -112,7 +112,7 @@ public class RouterTest {
 	
 	@Test
 	public void otherTests() throws NoSuchMethodException, SecurityException {
-		Router router = new ServletRouterImpl(this.ctx);
+		Router router = new ServletRouterImpl(this.ctx, null, null);
 		
 		Controller c = new TestController(null);
 		
@@ -144,7 +144,7 @@ public class RouterTest {
 		HttpServletRequest req = this.createMockRequest("/api/test/testString", "GET", "text/html,application/json;q=0.9");
 		HttpServletResponse res = new MockResponse();
 		
-		Router router = new ServletRouterImpl(this.ctx);
+		Router router = new ServletRouterImpl(this.ctx, null, null);
 		
 		Controller c = new TestController(null);
 		

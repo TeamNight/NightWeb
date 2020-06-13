@@ -45,6 +45,7 @@ import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.Server;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
 import dev.teamnight.nightweb.core.entities.XmlConfiguration;
+import dev.teamnight.nightweb.core.events.ServerStartedEvent;
 import dev.teamnight.nightweb.core.service.ApplicationService;
 import dev.teamnight.nightweb.core.util.StringUtil;
 
@@ -156,6 +157,8 @@ public class JettyServer implements Server, HttpSessionListener, HttpSessionIdLi
 					}
 				}
 			});
+			
+			this.core.getEventManager().fireEvent(new ServerStartedEvent());
 			
 			this.server.join();
 		} catch (Exception e) {

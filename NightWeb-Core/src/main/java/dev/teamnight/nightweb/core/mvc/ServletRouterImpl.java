@@ -29,6 +29,8 @@ import org.eclipse.jetty.http.HttpStatus;
 
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightWeb;
+import dev.teamnight.nightweb.core.annotations.Authenticated;
+import dev.teamnight.nightweb.core.events.RouteAddedEvent;
 import dev.teamnight.nightweb.core.mvc.annotations.Accepts;
 import dev.teamnight.nightweb.core.mvc.annotations.GET;
 import dev.teamnight.nightweb.core.mvc.annotations.POST;
@@ -55,9 +57,14 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 	private List<MethodHolder> routes = new ArrayList<MethodHolder>();
 	private List<Controller> controllers = new ArrayList<Controller>();
 
-	public ServletRouterImpl(Context ctx) {
+	private SecurityFilter authFilter;
+	private SecurityFilter adminFilter;
+
+	public ServletRouterImpl(Context ctx, SecurityFilter authFilter, SecurityFilter adminFilter) {
 		this.ctx = ctx;
 		this.pathResolver = new PathResolver();
+		this.authFilter = authFilter;
+		this.adminFilter = adminFilter;
 	}
 	
 	// ----------------------------------------------------------------------- //
@@ -269,6 +276,27 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 		}
 		
 		holder.setParameters(parametersMap);
+		
+		//Authenticated annotation
+		Authenticated authAnnotation = method.getAnnotation(Authenticated.class);
+		if(authAnnotation != null) {
+			FilterEntry entry = new FilterEntry(
+							this.pathResolver.compilePathSpec(StringUtil.filterURL(this.getContextPath() + holder.getPathSpec())).pattern(), 
+							holder.getHttpMethod()
+							);
+			
+			if(holder.getProduces().isPresent()) {
+				entry.addProduces(holder.getProduces().get());
+			}
+			
+			if(holder.getAccepts().isPresent()) {
+				entry.addAccepts(holder.getAccepts().get());
+			}
+			
+			this.authFilter.addPattern(entry);
+		}
+		
+		NightWeb.getEventManager().fireEvent(new RouteAddedEvent(holder));
 		
 		this.routes.add(holder);
 	}

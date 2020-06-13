@@ -30,12 +30,15 @@ import dev.teamnight.nightweb.core.annotations.Authenticated;
 import dev.teamnight.nightweb.core.annotations.IgnoreForceLogin;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
 import dev.teamnight.nightweb.core.mvc.Controller;
+import dev.teamnight.nightweb.core.mvc.FilterEntry;
 import dev.teamnight.nightweb.core.mvc.Router;
+import dev.teamnight.nightweb.core.mvc.SecurityFilter;
 import dev.teamnight.nightweb.core.mvc.ServletRouterImpl;
 import dev.teamnight.nightweb.core.service.ApplicationService;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 import dev.teamnight.nightweb.core.template.TemplateBuilder;
 import dev.teamnight.nightweb.core.template.TemplateManager;
+import dev.teamnight.nightweb.core.util.StringUtil;
 
 public class JettyApplicationContext implements ApplicationContext {
 
@@ -69,10 +72,14 @@ public class JettyApplicationContext implements ApplicationContext {
 		this.authenticationFilter = new FilterHolder(new AuthenticationFilter(this, this.coreData));
 		this.requestFilter = new FilterHolder(new RequestFilter(this, this.coreData));
 		
-		this.router = new ServletRouterImpl(this);
+		SecurityFilter authFilter = (SecurityFilter) this.authenticationFilter.getFilter();
+		SecurityFilter adminFilter = null;
+		
+		this.router = new ServletRouterImpl(this, authFilter, adminFilter);
 		this.handler.addServlet(new ServletHolder(this.router), "/*");
 		
 		this.handler.addFilter(this.requestFilter, "/*", EnumSet.allOf(DispatcherType.class));
+		this.handler.addFilter(this.authenticationFilter, "/*", EnumSet.allOf(DispatcherType.class));
 	}
 	
 	@Override
@@ -92,15 +99,24 @@ public class JettyApplicationContext implements ApplicationContext {
 			}
 		}
 		
+		SecurityFilter filter = (SecurityFilter) this.authenticationFilter.getFilter();
+		
 		Authenticated auth = servlet.getAnnotation(Authenticated.class);
 		if(auth != null) {
 			if(webServlet != null) {
 				for(String url : webServlet.urlPatterns()) {
 					LogManager.getLogger().info("Adding auth to " + url + "." + servlet.getCanonicalName()  + ": " + (servlet.getAnnotation(Authenticated.class) != null));
-					this.handler.addFilter(authenticationFilter, url, EnumSet.allOf(DispatcherType.class));
+					String realUrl = StringUtil.filterURL(this.getContextPath() + url).replace("*", "(.*)");
+					
+					FilterEntry entry = new FilterEntry(realUrl, new String[] {"GET", "POST", "PUT", "DELETE"});
+					
+					filter.addPattern(entry);
 				}
 			} else {
-				this.handler.addFilter(authenticationFilter, pathSpec, EnumSet.allOf(DispatcherType.class));
+				String realUrl = StringUtil.filterURL(this.getContextPath() + pathSpec).replace("*", "(.*)");
+				FilterEntry entry = new FilterEntry(realUrl, new String[] {"GET", "POST", "PUT", "DELETE"});
+				
+				filter.addPattern(entry);
 			}
 		}
 		
@@ -108,14 +124,20 @@ public class JettyApplicationContext implements ApplicationContext {
 		if(admin != null) {
 			if(webServlet != null) {
 				for(String url : webServlet.urlPatterns()) {
-					this.handler.addFilter(adminAuthenticationFilter, url, EnumSet.allOf(DispatcherType.class));
+					String realUrl = StringUtil.filterURL(this.getContextPath() + url).replace("*", "(.*)");
+					FilterEntry entry = new FilterEntry(realUrl, new String[] {"GET", "POST", "PUT", "DELETE"});
+					
+					filter.addPattern(entry);
 				}
 			} else {
-				this.handler.addFilter(adminAuthenticationFilter, pathSpec, EnumSet.allOf(DispatcherType.class));
+				String realUrl = StringUtil.filterURL(this.getContextPath() + pathSpec).replace("*", "(.*)");
+				FilterEntry entry = new FilterEntry(realUrl, new String[] {"GET", "POST", "PUT", "DELETE"});
+				
+				filter.addPattern(entry);
 			}
 		}
 		
-		this.registerServlet(new NightJettyServletHolder(servlet).setContext(ctx), pathSpec);
+		this.registerServlet(new ServletHolder(servlet), pathSpec);
 	}
 	
 	@Override
@@ -123,7 +145,13 @@ public class JettyApplicationContext implements ApplicationContext {
 		for(Annotation annotation : servlet.getAnnotations()) {
 			if(annotation instanceof Authenticated) {
 				LogManager.getLogger().info("Adding auth to " + pathSpec + "." + servlet.getCanonicalName()  + ": " + (servlet.getAnnotation(Authenticated.class) != null));
-				this.handler.addFilter(authenticationFilter, pathSpec, EnumSet.allOf(DispatcherType.class));
+				
+				SecurityFilter filter = (SecurityFilter) this.authenticationFilter.getFilter();
+				
+				String realUrl = StringUtil.filterURL(this.getContextPath() + pathSpec).replace("*", "(.*)");
+				FilterEntry entry = new FilterEntry(realUrl, new String[] {"GET", "POST", "PUT", "DELETE"});
+				
+				filter.addPattern(entry);
 			} else if(annotation instanceof AdminServlet) {
 				this.handler.addFilter(adminAuthenticationFilter, pathSpec, EnumSet.allOf(DispatcherType.class));
 			} else if(annotation instanceof IgnoreForceLogin) {
@@ -132,7 +160,7 @@ public class JettyApplicationContext implements ApplicationContext {
 			}
 		}
 		
-		this.registerServlet(new NightJettyServletHolder(servlet).setContext(this), pathSpec);
+		this.registerServlet(new ServletHolder(servlet), pathSpec);
 	}
 
 	@Override
@@ -143,11 +171,18 @@ public class JettyApplicationContext implements ApplicationContext {
 			throw new IllegalArgumentException("WebServlet annotation is missing on " + servlet.getCanonicalName());
 		}
 		
+		SecurityFilter filter = (SecurityFilter) this.authenticationFilter.getFilter();
+		
 		Authenticated auth = servlet.getAnnotation(Authenticated.class);
 		if(auth != null) {
 			for(String url : webServlet.urlPatterns()) {
 				LogManager.getLogger().info("Adding auth to " + url + "." + servlet.getCanonicalName()  + ": " + (servlet.getAnnotation(Authenticated.class) != null));
-				this.handler.addFilter(authenticationFilter, url, EnumSet.allOf(DispatcherType.class));
+				
+				
+				String realUrl = StringUtil.filterURL(this.getContextPath() + url).replace("*", "(.*)");
+				FilterEntry entry = new FilterEntry(realUrl, new String[] {"GET", "POST", "PUT", "DELETE"});
+				
+				filter.addPattern(entry);
 			}
 			
 		}
@@ -155,14 +190,15 @@ public class JettyApplicationContext implements ApplicationContext {
 		AdminServlet admin = servlet.getAnnotation(AdminServlet.class);
 		if(admin != null) {
 			for(String url : webServlet.urlPatterns()) {
-				this.handler.addFilter(adminAuthenticationFilter, url, EnumSet.allOf(DispatcherType.class));
+				String realUrl = StringUtil.filterURL(this.getContextPath() + url).replace("*", "(.*)");
+				FilterEntry entry = new FilterEntry(realUrl, new String[] {"GET", "POST", "PUT", "DELETE"});
+				
+				filter.addPattern(entry);
 			}
 		}
 		
-		NightJettyServletHolder holder = new NightJettyServletHolder(servlet).setContext(this);
-		
 		for(String url : webServlet.urlPatterns()) {
-			this.registerServlet(holder, url);
+			this.registerServlet(new ServletHolder(servlet), url);
 		}
 	}
 
@@ -171,7 +207,12 @@ public class JettyApplicationContext implements ApplicationContext {
 		Authenticated auth = holder.getHeldClass().getAnnotation(Authenticated.class);
 		if(auth != null) {
 			LogManager.getLogger().info("Adding auth to " + pathSpec + "." + holder.getHeldClass().getCanonicalName()  + ": " + (holder.getHeldClass().getAnnotation(Authenticated.class) != null));
-			this.handler.addFilter(authenticationFilter, pathSpec, EnumSet.allOf(DispatcherType.class));
+			SecurityFilter filter = (SecurityFilter) this.authenticationFilter.getFilter();
+			
+			String realUrl = StringUtil.filterURL(this.getContextPath() + pathSpec).replace("*", "(.*)");
+			FilterEntry entry = new FilterEntry(realUrl, new String[] {"GET", "POST", "PUT", "DELETE"});
+			
+			filter.addPattern(entry);
 		}
 		AdminServlet admin = holder.getClass().getAnnotation(AdminServlet.class);
 		if(admin != null) {
