@@ -285,9 +285,7 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 							holder.getHttpMethod()
 							);
 			
-			if(holder.getProduces().isPresent()) {
-				entry.addProduces(holder.getProduces().get());
-			}
+			entry.addProduces(holder.getProduces());
 			
 			if(holder.getAccepts().isPresent()) {
 				entry.addAccepts(holder.getAccepts().get());
@@ -390,13 +388,9 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 				.filter(h -> h.getHttpMethod().equalsIgnoreCase(query.method()))
 				.filter(h -> {
 					if(query.produces().isPresent()) {
-						if(h.getProduces().isPresent()) {
-							return h.getProduces().get().equalsIgnoreCase(query.produces().get());
-						} else {
-							return true;
-						}
+						return h.getProduces().equalsIgnoreCase(query.produces().get());
 					} else {
-						return true;
+						return h.getProduces().equalsIgnoreCase("text/html");
 					}
 				})
 				.filter(h -> {
@@ -404,10 +398,14 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 						if(h.getAccepts().isPresent()) {
 							return h.getAccepts().get().equalsIgnoreCase(query.accepts().get());
 						} else {
-							return true;
+							return false;
 						}
 					} else {
-						return true;
+						if(h.getAccepts().isPresent()) {
+							return false;
+						} else {
+							return true;
+						}
 					}
 				})
 				.findFirst()
@@ -429,13 +427,9 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 				.filter(h -> h.getHttpMethod().equalsIgnoreCase(query.method()))
 				.filter(h -> {
 					if(query.produces().isPresent()) {
-						if(h.getProduces().isPresent()) {
-							return h.getProduces().get().equalsIgnoreCase(query.produces().get());
-						} else {
-							return true;
-						}
+						return h.getProduces().equalsIgnoreCase(query.produces().get());
 					} else {
-						return true;
+						return h.getProduces().equalsIgnoreCase("text/html");
 					}
 				})
 				.filter(h -> {
@@ -443,10 +437,14 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 						if(h.getAccepts().isPresent()) {
 							return h.getAccepts().get().equalsIgnoreCase(query.accepts().get());
 						} else {
-							return true;
+							return false;
 						}
 					} else {
-						return true;
+						if(h.getAccepts().isPresent()) {
+							return false;
+						} else {
+							return true;
+						}
 					}
 				})
 				.findFirst()

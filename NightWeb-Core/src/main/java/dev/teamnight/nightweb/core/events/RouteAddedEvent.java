@@ -28,7 +28,7 @@ public class RouteAddedEvent implements Event {
 		this.pattern = holder.getRegex();
 		this.pathSpec = holder.getPathSpec();
 		this.httpMethod = holder.getHttpMethod();
-		this.produces = holder.getProduces().orElse(null);
+		this.produces = holder.getProduces();
 		this.accepts = holder.getAccepts().orElse(null);
 	}
 	

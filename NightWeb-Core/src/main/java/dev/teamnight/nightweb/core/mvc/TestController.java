@@ -33,6 +33,7 @@ public class TestController extends Controller {
 	}
 
 	@GET
+	@Authenticated
 	@Produces("application/json")
 	@Path("/index/:username")
 	public Result indexAction(@PathParam("username") String username, HttpServletRequest req) {
@@ -49,8 +50,6 @@ public class TestController extends Controller {
 	}
 	
 	@GET
-	@Produces("text/html")
-	@Authenticated
 	@Path("/index/:username")
 	public Result indexAction(@PathParam("username") String username) {
 		return ok("Hello, " + username);

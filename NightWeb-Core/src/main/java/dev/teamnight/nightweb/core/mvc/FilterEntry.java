@@ -3,6 +3,7 @@
  */
 package dev.teamnight.nightweb.core.mvc;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -13,15 +14,19 @@ import java.util.regex.Pattern;
 public class FilterEntry {
 
 	private Pattern regex;
-	private List<String> httpMethods;
-	private List<String> produces;
-	private List<String> accepts;
+	private List<String> httpMethods = new ArrayList<String>();
+	private List<String> produces = new ArrayList<String>();
+	private List<String> accepts = new ArrayList<String>();
 	
 	public FilterEntry(String pattern, String... httpMethods) {
 		this.regex = Pattern.compile(pattern);
 		
 		for(String method : httpMethods) {
 			this.httpMethods.add(method);
+		}
+		
+		if(this.httpMethods.isEmpty()) {
+			this.httpMethods.add("GET");
 		}
 	}
 	

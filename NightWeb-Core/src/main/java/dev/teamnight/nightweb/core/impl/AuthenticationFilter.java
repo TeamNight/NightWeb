@@ -5,6 +5,7 @@ package dev.teamnight.nightweb.core.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -62,9 +63,6 @@ public class AuthenticationFilter implements SecurityFilter {
 			HttpServletRequest req = (HttpServletRequest) request;
 			HttpServletResponse resp = (HttpServletResponse) response;
 			
-			LOGGER.info("Doing auth -> RequestURI: " + req.getRequestURI());
-			LOGGER.info("Doing auth -> matches: " + this.matches(req, this.patterns));
-			
 			if(!this.matches(req, this.patterns)) {
 				chain.doFilter(request, response);
 				return;
@@ -115,79 +113,95 @@ public class AuthenticationFilter implements SecurityFilter {
 
 	@Override
 	public boolean matches(HttpServletRequest request, Collection<FilterEntry> entries) {
+		LOGGER.info("-------------------------------------------------\n"
+				+ "Testing for Request URI: " + request.getRequestURI()
+				+ "\nMethod: " + request.getMethod()
+				+ "\nContent-Type: " + (request.getContentType() == null ? "null" : request.getContentType())
+				+ "\nAccept: " + (request.getHeader("Accept") == null ? "*/*" : request.getHeader("Accept"))
+				+ "\n-------------------------------------------------");
 		for(FilterEntry entry : entries) {
-			LOGGER.info("Doing auth -> Pattern: \"" + entry.getRegex().pattern() + "\"");
+			LOGGER.info("-----------------------------------------------");
+			LOGGER.info("Pattern: \"" + entry.getRegex().pattern() + "\"");
+			LOGGER.info("Method: " + String.join(", ", entry.getHttpMethods()));
+			LOGGER.info("Accept: " + String.join(", ", entry.getProduces()));
+			LOGGER.info("Allowed Content-Types: " + String.join(", ", entry.getAccepts()));
 			
-			boolean matches = false;
+			boolean uriMatches = false;
+			boolean methodMatches = false;
+			boolean producesMatches = false;
+			boolean acceptsMatches = false;
 			
 			Matcher matcher = entry.getRegex().matcher(request.getRequestURI());
 			
 			//First, match the uri with the regex, if not, continue
 			if(matcher.matches()) {
-				matches = true;
+				uriMatches = true;
 			} else {
 				continue;
 			}
+			
+			LOGGER.info("Request URI matches REGEX");
 			
 			//Then compare the methods of boths
 			for(String method : entry.getHttpMethods()) {
 				if(method.equalsIgnoreCase(request.getMethod())) {
-					matches = true;
+					methodMatches = true;
 				}
 			}
 			
 			//If not, continue
-			if(!matches) {
+			if(!methodMatches) {
 				continue;
 			}
 			
+			LOGGER.info("Method matching");
+			
 			//Then the Accept Header needs to be checked
-			List<String> accepts = StringUtil.parseAcceptHeader(request.getHeader("Accept") == null ? "" : request.getHeader("Accept"));
+			List<String> acceptHeaders = request.getHeader("Accept") == null ? Arrays.asList("text/html") : StringUtil.parseAcceptHeader(request.getHeader("Accept"));
+			
+			LOGGER.info("Accept-Header: " + String.join(" - ", acceptHeaders));
 			
 			//Now, compare both accept lists
-			if(accepts.isEmpty()) {
-				if(entry.getProduces().isEmpty()) {
-					matches = true;
-				} else {
-					continue;
-				}
-			} else {
-				if(entry.getProduces().isEmpty()) {
-					matches = true;
-				} else {
-					for(String produce : entry.getProduces()) {
-						for(String value : accepts) {
-							if(produce.equalsIgnoreCase(value)) {
-								matches = true;
-							}
- 						}
+			for(String produce : entry.getProduces()) {
+				for(String requestProduce : acceptHeaders) {
+					if(produce.equalsIgnoreCase(requestProduce)) {
+						producesMatches = true;
 					}
 				}
 			}
 			
 			//If no match, then continue
-			if(!matches) {
+			if(!producesMatches) {
 				continue;
 			}
+			
+			LOGGER.info("Accept-Headers match");
 			
 			//Now the contentType needs to be checked
 			String contentType = request.getContentType();
 			
-			if(contentType == null && !entry.getAccepts().isEmpty()) {
-				continue;
+			if(contentType == null && entry.getAccepts().isEmpty()) {
+				acceptsMatches = true;
 			}
 			
-			if(entry.getAccepts().isEmpty()) {
-				matches = true;
-			} else {
+			if(!acceptsMatches) {
+				if(contentType == null) {
+					continue;
+				}
+				
+				if(entry.getAccepts().isEmpty()) {
+					continue;
+				}
+				
 				for(String accept : entry.getAccepts()) {
 					if(accept.equalsIgnoreCase(contentType)) {
-						matches = true;
+						acceptsMatches = true;
 					}
 				}
 			}
 			
-			if(matches) {
+			if(uriMatches && methodMatches && producesMatches && acceptsMatches) {
+				LOGGER.info("All matches");
 				return true;
 			}
 		}

@@ -48,6 +48,7 @@ public class MethodHolder {
 		this.ctx = ctx;
 		this.invokeMethod = invokeMethod;
 		this.controller = controller;
+		this.httpMethod = "GET";
 		this.produces = "text/html";
 	}
 	
@@ -160,8 +161,8 @@ public class MethodHolder {
 	/**
 	 * @return the produces
 	 */
-	public Optional<String> getProduces() {
-		return Optional.ofNullable(this.produces);
+	public String getProduces() {
+		return this.produces;
 	}
 
 	/**

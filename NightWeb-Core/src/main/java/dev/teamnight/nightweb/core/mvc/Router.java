@@ -96,8 +96,10 @@ public interface Router {
 	/**
 	 * Returns the MethodHolders matching the url
 	 * 
+	 * 
 	 * @param {@link RouteQuery} a query containing information
 	 * @return {@link MethodHolder}[] the method holder
+	 * @see {@link dev.teamnight.nightweb.core.mvc.SecurityFilter#matches(javax.servlet.http.HttpServletRequest, java.util.Collection)} for Route Matching rules
 	 */
 	public MethodHolder getMethodByURL(RouteQuery query);
 	
@@ -116,6 +118,7 @@ public interface Router {
 	 * 
 	 * @param {@link RouteQuery} a query containing information
 	 * @return {@link Controller} or {@code null} if no method holder is found
+	 * @see {@link dev.teamnight.nightweb.core.mvc.SecurityFilter#matches(javax.servlet.http.HttpServletRequest, java.util.Collection)} for Route Matching rules
 	 */
 	public MethodHolder getMethod(RouteQuery query);
 	
