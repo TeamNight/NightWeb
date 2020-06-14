@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.servlet.GenericServlet;
 import javax.servlet.ServletException;
@@ -91,24 +92,10 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 	 */
 	protected void service(HttpServletRequest req, HttpServletResponse res) throws IOException, ServletException {
 		String url = req.getPathInfo();
-		
-		if(!this.pathExists(url)) {
-			res.sendError(HttpStatus.NOT_FOUND_404, "The request url <b>" + req.getRequestURI() + "</b> was not found.");
-			return;
-		}
-		
-		RouteQuery query = RouteQuery.of(url).method(req.getMethod());
+		List<String> acceptHeaders = StringUtil.parseAcceptHeader(req.getHeader("Accept") == null ? "" : req.getHeader("Accept"));
 		
 		MethodHolder holder = null;
-		
-		if(this.getMethodByURL(query) == null) {
-			res.sendError(HttpStatus.METHOD_NOT_ALLOWED_405, "The method " + query.method() + " is not allowed for the path <b>" + req.getRequestURI() + "</b>.");
-			return;
-		}
-		
-		query.accepts(req.getContentType());
-		
-		List<String> acceptHeaders = StringUtil.parseAcceptHeader(req.getHeader("Accept") == null ? "" : req.getHeader("Accept"));
+		RouteQuery query = RouteQuery.of(url).method(req.getMethod()).accepts(req.getContentType());
 		
 		if(!acceptHeaders.isEmpty()) {
 			for(String acceptHeader : acceptHeaders) {
@@ -125,20 +112,24 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 		}
 		
 		if(holder == null) {
-			res.sendError(HttpStatus.BAD_REQUEST_400, "The Accept-Headers are not allowed for <b>" + req.getRequestURI() + "</b>.");
-			return;
-		}
-		
-		if(holder.getAccepts().isPresent()
-				&& !holder.getAccepts().get().equalsIgnoreCase("*/*")) {
-			if(req.getContentType() == null) {
-				res.sendError(HttpStatus.BAD_REQUEST_400, "Request Content-Type is not allowed");
-				return;
-			}
+			String failureReason = this.getFailureReason(query);
 			
-			if(!holder.getAccepts().get().equalsIgnoreCase(req.getContentType())) {
-				res.sendError(HttpStatus.BAD_REQUEST_400, "Request Content-Type is not allowed");
-				return;
+			switch(failureReason) {
+				case "URL_NOT_MATCHING":
+					res.sendError(HttpStatus.NOT_FOUND_404, "The request url <b>" + req.getRequestURI() + "</b> was not found.");
+					return;
+				case "METHOD_NOT_MATCHING":
+					res.sendError(HttpStatus.METHOD_NOT_ALLOWED_405, "The method " + query.method() + " is not allowed for the path <b>" + req.getRequestURI() + "</b>.");
+					return;
+				case "PRODUCES_NOT_MATCHING":
+					res.sendError(HttpStatus.BAD_REQUEST_400, "The Accept-Headers are not allowed for <b>" + req.getRequestURI() + "</b>.");
+					return;
+				case "ACCEPTS_NOT_MATCHING":
+					res.sendError(HttpStatus.BAD_REQUEST_400, "Request Content-Type is not allowed");
+					return;
+				default:
+					res.sendError(HttpStatus.INTERNAL_SERVER_ERROR_500, "Unknown error occured while searching routes");
+					return;
 			}
 		}
 		
@@ -296,6 +287,8 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 		
 		NightWeb.getEventManager().fireEvent(new RouteAddedEvent(holder));
 		
+		LOGGER.info("Registering route \00BB" + holder.getPathSpec() + "\00AB using Method " + holder.getHttpMethod() + "");
+		
 		this.routes.add(holder);
 	}
 	
@@ -381,6 +374,45 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 		return null;
 	}
 	
+	public String getFailureReason(RouteQuery query) {
+		List<MethodHolder> holders = this.routes.stream().filter(h -> h.getRegex().matcher(query.url()).matches()).collect(Collectors.toList());
+		
+		if(holders.size() == 0) {
+			return "URL_NOT_MATCHING";
+		}
+		
+		holders = holders.stream().filter(h -> h.getHttpMethod().equalsIgnoreCase(query.method())).collect(Collectors.toList());
+		
+		if(holders.size() == 0) {
+			return "METHOD_NOT_MATCHING";
+		}
+		
+		final String produces = query.produces().isPresent() ? query.produces().get() : "text/html";
+		
+		holders = holders.stream().filter(h -> h.getProduces().equalsIgnoreCase(produces)).collect(Collectors.toList());
+		
+		if(holders.size() == 0) {
+			return "PRODUCES_NOT_MATCHING";
+		}
+		
+		holders = holders.stream().filter(h -> h.getAccepts().isPresent()).collect(Collectors.toList());
+		
+		if(holders.size() > 0) {
+			if(query.accepts().isPresent()) {
+				holders = holders.stream().filter(h -> query.accepts().get().equalsIgnoreCase(h.getAccepts().get())).collect(Collectors.toList());
+				
+				if(holders.size() == 0) {
+					return "ACCEPTS_NOT_MATCHING";
+				} else {
+					return null;
+				}
+			}
+			return "ACCEPTS_NOT_MATCHING";
+		}
+
+		return null;
+	}
+	
 	@Override
 	public MethodHolder getMethodByURL(RouteQuery query) {
 		return this.routes.stream()
@@ -394,18 +426,14 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 					}
 				})
 				.filter(h -> {
-					if(query.accepts().isPresent()) {
-						if(h.getAccepts().isPresent()) {
-							return h.getAccepts().get().equalsIgnoreCase(query.accepts().get());
+					if(h.getAccepts().isPresent()) {
+						if(query.accepts().isPresent()) {
+							return query.accepts().get().equalsIgnoreCase(h.getAccepts().get());
 						} else {
 							return false;
 						}
 					} else {
-						if(h.getAccepts().isPresent()) {
-							return false;
-						} else {
-							return true;
-						}
+						return true;
 					}
 				})
 				.findFirst()
@@ -433,18 +461,14 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 					}
 				})
 				.filter(h -> {
-					if(query.accepts().isPresent()) {
-						if(h.getAccepts().isPresent()) {
-							return h.getAccepts().get().equalsIgnoreCase(query.accepts().get());
+					if(h.getAccepts().isPresent()) {
+						if(query.accepts().isPresent()) {
+							return query.accepts().get().equalsIgnoreCase(h.getAccepts().get());
 						} else {
 							return false;
 						}
 					} else {
-						if(h.getAccepts().isPresent()) {
-							return false;
-						} else {
-							return true;
-						}
+						return true;
 					}
 				})
 				.findFirst()

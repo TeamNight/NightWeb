@@ -48,7 +48,6 @@ public class MethodHolder {
 		this.ctx = ctx;
 		this.invokeMethod = invokeMethod;
 		this.controller = controller;
-		this.httpMethod = "GET";
 		this.produces = "text/html";
 	}
 	

@@ -35,7 +35,8 @@ public interface SecurityFilter extends Filter {
 	 *    or empty. Then, request and entry must have the same value.
 	 * 4. Accepts ("Content-Type"-Header) gets null as default.
 	 *    If request and entry accepts are null, then return true.
-	 *    If only one of request or entry is null, return false.
+	 *    If only one of request or entry is null, then if the
+	 *    entry is null, true, if the request null, then false
 	 *    If both are not null, both must have the same value for true.
 	 * @param pathInfo
 	 * @return

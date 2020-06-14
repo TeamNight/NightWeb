@@ -180,16 +180,12 @@ public class AuthenticationFilter implements SecurityFilter {
 			//Now the contentType needs to be checked
 			String contentType = request.getContentType();
 			
-			if(contentType == null && entry.getAccepts().isEmpty()) {
+			if(entry.getAccepts().isEmpty()) {
 				acceptsMatches = true;
 			}
 			
 			if(!acceptsMatches) {
 				if(contentType == null) {
-					continue;
-				}
-				
-				if(entry.getAccepts().isEmpty()) {
 					continue;
 				}
 				
