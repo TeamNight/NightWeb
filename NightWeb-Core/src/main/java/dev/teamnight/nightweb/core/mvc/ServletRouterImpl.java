@@ -33,6 +33,7 @@ import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.annotations.Authenticated;
 import dev.teamnight.nightweb.core.events.RouteAddedEvent;
 import dev.teamnight.nightweb.core.mvc.annotations.Accepts;
+import dev.teamnight.nightweb.core.mvc.annotations.Authorized;
 import dev.teamnight.nightweb.core.mvc.annotations.GET;
 import dev.teamnight.nightweb.core.mvc.annotations.POST;
 import dev.teamnight.nightweb.core.mvc.annotations.Path;
@@ -268,21 +269,28 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 		
 		holder.setParameters(parametersMap);
 		
+		FilterEntry entry = new FilterEntry(
+				this.pathResolver.compilePathSpec(StringUtil.filterURL(this.getContextPath() + holder.getPathSpec())).pattern(), 
+				holder.getHttpMethod()
+				);
+		entry.addProduces(holder.getProduces());
+		
+		if(holder.getAccepts().isPresent()) {
+			entry.addAccepts(holder.getAccepts().get());
+		}
+		
 		//Authenticated annotation
 		Authenticated authAnnotation = method.getAnnotation(Authenticated.class);
 		if(authAnnotation != null) {
-			FilterEntry entry = new FilterEntry(
-							this.pathResolver.compilePathSpec(StringUtil.filterURL(this.getContextPath() + holder.getPathSpec())).pattern(), 
-							holder.getHttpMethod()
-							);
-			
-			entry.addProduces(holder.getProduces());
-			
-			if(holder.getAccepts().isPresent()) {
-				entry.addAccepts(holder.getAccepts().get());
-			}
-			
 			this.authFilter.addPattern(entry);
+		}
+		
+		//Authorization annotation
+		Authorized authorizedAnnotation = method.getAnnotation(Authorized.class);
+		if(authorizedAnnotation != null) {
+			entry.addAttribute("dev.teamnight.nightweb.core.permission", authorizedAnnotation.value());
+			
+			this.adminFilter.addPattern(entry);
 		}
 		
 		NightWeb.getEventManager().fireEvent(new RouteAddedEvent(holder));

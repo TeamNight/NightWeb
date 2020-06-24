@@ -4,7 +4,9 @@
 package dev.teamnight.nightweb.core.mvc;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -17,6 +19,7 @@ public class FilterEntry {
 	private List<String> httpMethods = new ArrayList<String>();
 	private List<String> produces = new ArrayList<String>();
 	private List<String> accepts = new ArrayList<String>();
+	private Map<String, Object> attributes = new HashMap<String, Object>(); 
 	
 	public FilterEntry(String pattern, String... httpMethods) {
 		this.regex = Pattern.compile(pattern);
@@ -54,6 +57,14 @@ public class FilterEntry {
 		return this;
 	}
 	
+	public FilterEntry addAttribute(String key, Object value) {
+		if(!this.attributes.containsKey(key)) {
+			this.attributes.put(key, value);
+		}
+		
+		return this;
+	}
+	
 	/**
 	 * @return the regex
 	 */
@@ -80,6 +91,13 @@ public class FilterEntry {
 	 */
 	public List<String> getAccepts() {
 		return accepts;
+	}
+	
+	/**
+	 * @return the attributes
+	 */
+	public Map<String, Object> getAttributes() {
+		return attributes;
 	}
 	
 }

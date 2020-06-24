@@ -45,6 +45,7 @@ public class JettyApplicationContext implements ApplicationContext {
 	private ApplicationData coreData;
 	private FilterHolder adminAuthenticationFilter;
 	private FilterHolder authenticationFilter;
+	private FilterHolder authorizationFilter;
 	private FilterHolder requestFilter;
 	
 	private final ServletContextHandler handler;
@@ -70,16 +71,18 @@ public class JettyApplicationContext implements ApplicationContext {
 		this.coreData = this.getServiceManager().getService(ApplicationService.class).getByIdentifier("dev.teamnight.nightweb.core");
 		this.adminAuthenticationFilter = new FilterHolder(new AdminAuthenticationFilter(this, this.coreData));
 		this.authenticationFilter = new FilterHolder(new AuthenticationFilter(this, this.coreData));
+		this.authorizationFilter = new FilterHolder(new AuthorizationFilter(this));
 		this.requestFilter = new FilterHolder(new RequestFilter(this, this.coreData));
 		
 		SecurityFilter authFilter = (SecurityFilter) this.authenticationFilter.getFilter();
-		SecurityFilter adminFilter = null;
+		SecurityFilter adminFilter = (SecurityFilter) this.authorizationFilter.getFilter();
 		
 		this.router = new ServletRouterImpl(this, authFilter, adminFilter);
 		this.handler.addServlet(new ServletHolder(this.router), "/*");
 		
 		this.handler.addFilter(this.requestFilter, "/*", EnumSet.allOf(DispatcherType.class));
 		this.handler.addFilter(this.authenticationFilter, "/*", EnumSet.allOf(DispatcherType.class));
+		this.handler.addFilter(this.authorizationFilter, "/*", EnumSet.allOf(DispatcherType.class));
 	}
 	
 	@Override
