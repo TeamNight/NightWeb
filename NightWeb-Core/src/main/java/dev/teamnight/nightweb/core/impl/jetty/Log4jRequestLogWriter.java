@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2020 Jonas Müller, Jannik Müller
  */
-package dev.teamnight.nightweb.core.impl;
+package dev.teamnight.nightweb.core.impl.jetty;
 
 import java.io.IOException;
 

@@ -28,15 +28,12 @@ public interface Server {
 	public List<HttpSession> getSessions();
 	
 	/**
-	 * Creates an instance of ApplicationContext suitable for the server implementation.
-	 * The ApplicationContext implementation shall be able to register Servlets so that
-	 * Applications and Modules can register them.
+	 * Creates an instance of ServletRegistrationAdapter suitable to the server implementation.
 	 * 
-	 * @param {@link dev.teamnight.nightweb.core.Application} the Application to get an ApplicationContext
-	 * @param String Base Path for the Application, e.g. /blog/
-	 * @throws IllegalArgumentException if there is already an ApplicationContext set or if the Application is not registered in the Database
+	 * @param {@link dev.teamnight.nightweb.core.ApplicationContext} the ApplicationContext
+	 * @throws IllegalArgumentException if there is already a ServletRegistrationAdapter
 	 */
-	ApplicationContext getContext(Application app) throws IllegalArgumentException;
+	public ServletRegistrationAdapter getServletRegistration(ApplicationContext appContext) throws IllegalArgumentException;
 	
 	/**
 	 * Returns the mapping for the specified servlet in order to access the URL right, implements context path and the mapping without ending slash or *.

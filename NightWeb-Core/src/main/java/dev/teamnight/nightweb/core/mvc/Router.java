@@ -77,6 +77,8 @@ public interface Router {
 	 * by the canoncial name of the Controller and
 	 * the name of the Method.
 	 * 
+	 * <p>This includes the context path set for the application.</p>
+	 * 
 	 * <p>This requires a method to have a standalone name</p>
 	 * @param {@link String} the name of the controller and method as "package.Controller.method"
 	 * @return String the path

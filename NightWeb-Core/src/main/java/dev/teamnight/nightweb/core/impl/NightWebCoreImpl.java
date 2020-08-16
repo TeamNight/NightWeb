@@ -27,7 +27,6 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.ServletHolder;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 
@@ -36,10 +35,14 @@ import com.google.gson.GsonBuilder;
 
 import dev.teamnight.nightweb.core.Application;
 import dev.teamnight.nightweb.core.ApplicationContext;
+import dev.teamnight.nightweb.core.AuthenticatorFactory;
 import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.NightWebCore;
+import dev.teamnight.nightweb.core.PathRegistry;
 import dev.teamnight.nightweb.core.Server;
+import dev.teamnight.nightweb.core.ServletRegistrationAdapter;
+import dev.teamnight.nightweb.core.controllers.AdminController;
 import dev.teamnight.nightweb.core.entities.ActivationType;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
 import dev.teamnight.nightweb.core.entities.DefaultPermission;
@@ -57,6 +60,7 @@ import dev.teamnight.nightweb.core.entities.XmlConfiguration;
 import dev.teamnight.nightweb.core.events.DefaultEventManagerImpl;
 import dev.teamnight.nightweb.core.events.EventManager;
 import dev.teamnight.nightweb.core.events.TemplatePreprocessEvent;
+import dev.teamnight.nightweb.core.impl.jetty.JettyServer;
 import dev.teamnight.nightweb.core.entities.Setting.Type;
 import dev.teamnight.nightweb.core.entities.SystemSetting;
 import dev.teamnight.nightweb.core.module.JavaModuleLoader;
@@ -81,7 +85,6 @@ import dev.teamnight.nightweb.core.servlets.TestServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminDashboardServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminDevAutoLoginServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminGroupListServlet;
-import dev.teamnight.nightweb.core.servlets.admin.AdminLoginServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminModuleEditServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminModuleInstallListServlet;
 import dev.teamnight.nightweb.core.servlets.admin.AdminModuleInstallServlet;
@@ -99,6 +102,7 @@ import dev.teamnight.nightweb.core.servlets.admin.AdminUserPermissionsEditServle
 import dev.teamnight.nightweb.core.servlets.admin.AdminUserUnbanServlet;
 import dev.teamnight.nightweb.core.template.TemplateManager;
 import dev.teamnight.nightweb.core.template.TemplateManagerImpl;
+import dev.teamnight.nightweb.core.util.ServletBuilder;
 import freemarker.template.TemplateModelException;
 
 public class NightWebCoreImpl extends Application implements NightWebCore {
@@ -107,7 +111,10 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 
 	private Server server;
 	
+	private PathRegistry pathRegistry;
+	
 	private SessionFactory sessionFactory;
+	private AuthenticatorFactory authFactory;
 	
 	private ModuleManager moduleManager;
 	
@@ -221,6 +228,9 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		this.createIfNotExists(NightWeb.TEMPLATES_DIR);
 		this.createIfNotExists(NightWeb.LANG_DIR);
 		
+		//Path Registry
+		this.pathRegistry = new PathRegistryImpl();
+		
 		//Jetty Server
 		this.server = new JettyServer(this, this.config);
 		
@@ -270,6 +280,9 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		this.server.setSessionFactory(this.sessionFactory);
 		LOGGER.debug("Built SessionFactory: " + this.sessionFactory.getClass().getCanonicalName());
 		
+		//Create the authenticator factory
+		this.authFactory = new AuthenticatorFactory(SessionAuthenticator.class);
+		
 		//Register all important services
 		LOGGER.info("Setting up core services...");
 		this.serviceMan = new ServiceManagerImpl(this.sessionFactory);
@@ -309,7 +322,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		this.registerEvents();
 		
 		this.setIdentifier("dev.teamnight.nightweb.core");
-		ApplicationContext coreContext = this.server.getContext(this);
+		ApplicationContext coreContext = this.getContext(this);
 		this.init(coreContext);
 		
 		LOGGER.info("Enabling modules...");
@@ -543,43 +556,43 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 
 	@Override
 	public void start(ApplicationContext ctx) {
-		ServletHolder staticHolder = new ServletHolder("static", DefaultServlet.class);
-		staticHolder.setInitParameter("resourceBase", NightWeb.STATIC_DIR.toAbsolutePath().toString());
-		staticHolder.setInitParameter("dirAllowed", "false");
-		staticHolder.setInitParameter("pathInfoOnly", "true");
+		ctx.addServlet(new ServletBuilder(DefaultServlet.class).servletName("static")
+				.addInitParamter("resourceBase", NightWeb.STATIC_DIR.toAbsolutePath().toString())
+				.addInitParamter("dirAllowed", "false")
+				.addInitParamter("pathInfoOnly", "true")
+				, "/static/*");
 		
-		ctx.registerServletHolder(staticHolder, "/static/*");
-		
-		ctx.registerServlet(RegistrationServlet.class, "/register");
-		ctx.registerServlet(ActivationServlet.class, "/activation/*");
-		ctx.registerServlet(LoginServlet.class, "/login");
-		ctx.registerServlet(LogoutServlet.class, "/logout");
+		ctx.addServlet(RegistrationServlet.class, "/register");
+		ctx.addServlet(ActivationServlet.class, "/activation/*");
+		ctx.addServlet(LoginServlet.class, "/login");
+		ctx.addServlet(LogoutServlet.class, "/logout");
 		
 		//Admin
-		ctx.registerServlet(AdminDashboardServlet.class, "/admin");
-		ctx.registerServlet(AdminLoginServlet.class, "/admin/login");
-		ctx.registerServlet(AdminModuleListServlet.class, "/admin/modules/*");
-		ctx.registerServlet(AdminModuleEditServlet.class, "/admin/module/*");
-		ctx.registerServlet(AdminModuleInstallListServlet.class, "/admin/install-modules");
-		ctx.registerServlet(AdminModuleInstallServlet.class, "/admin/install");
-		ctx.registerServlet(AdminModuleUninstallServlet.class, "/admin/uninstall/*");
-		ctx.registerServlet(AdminSettingsServlet.class, "/admin/settings/*");
-		ctx.registerServlet(AdminUserListServlet.class, "/admin/users/*");
-		ctx.registerServlet(AdminUserEditServlet.class, "/admin/user/edit/*");
-		ctx.registerServlet(AdminUserAddServlet.class, "/admin/user/add");
-		ctx.registerServlet(AdminUserDeleteServlet.class, "/admin/user/delete/*");
-		ctx.registerServlet(AdminUserDisableServlet.class, "/admin/user/disable/*");
-		ctx.registerServlet(AdminUserBanServlet.class, "/admin/user/ban/*");
-		ctx.registerServlet(AdminUserEnableServlet.class, "/admin/user/enable/*");
-		ctx.registerServlet(AdminUserUnbanServlet.class, "/admin/user/unban/*");
-		ctx.registerServlet(AdminUserPermissionsEditServlet.class, "/admin/user/permissions/*");
-		ctx.registerServlet(AdminGroupListServlet.class, "/admin/usergroups/*");
+//		ctx.registerServlet(AdminDashboardServlet.class, "/admin");
+//		ctx.registerServlet(AdminLoginServlet.class, "/admin/login");
+		ctx.addServlet(AdminModuleListServlet.class, "/admin/modules/*");
+		ctx.addServlet(AdminModuleEditServlet.class, "/admin/module/*");
+		ctx.addServlet(AdminModuleInstallListServlet.class, "/admin/install-modules");
+		ctx.addServlet(AdminModuleInstallServlet.class, "/admin/install");
+		ctx.addServlet(AdminModuleUninstallServlet.class, "/admin/uninstall/*");
+		ctx.addServlet(AdminSettingsServlet.class, "/admin/settings/*");
+		ctx.addServlet(AdminUserListServlet.class, "/admin/users/*");
+		ctx.addServlet(AdminUserEditServlet.class, "/admin/user/edit/*");
+		ctx.addServlet(AdminUserAddServlet.class, "/admin/user/add");
+		ctx.addServlet(AdminUserDeleteServlet.class, "/admin/user/delete/*");
+		ctx.addServlet(AdminUserDisableServlet.class, "/admin/user/disable/*");
+		ctx.addServlet(AdminUserBanServlet.class, "/admin/user/ban/*");
+		ctx.addServlet(AdminUserEnableServlet.class, "/admin/user/enable/*");
+		ctx.addServlet(AdminUserUnbanServlet.class, "/admin/user/unban/*");
+		ctx.addServlet(AdminUserPermissionsEditServlet.class, "/admin/user/permissions/*");
+		ctx.addServlet(AdminGroupListServlet.class, "/admin/usergroups/*");
 		
 		//Test
-		ctx.registerServlet(TestServlet.class, "/test");
-		ctx.registerServlet(AdminDevAutoLoginServlet.class, "/admin/autologin");
+		ctx.addServlet(TestServlet.class, "/test");
+		ctx.addServlet(AdminDevAutoLoginServlet.class, "/admin/autologin");
 		
 		ctx.addController(new TestController(ctx));
+		ctx.addController(new AdminController(ctx));
 	}
 	
 	// ----------------------------------------------------------------------- //
@@ -691,6 +704,33 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	@Override
 	public Gson getGson() {
 		return this.gson;
+	}
+
+	@Override
+	public PathRegistry getPathRegistry() {
+		return this.pathRegistry;
+	}
+
+	@Override
+	public ApplicationContext getContext(Application app) throws IllegalArgumentException {
+		if(app.getIdentifier() == null) {
+			throw new IllegalArgumentException("Identifier for " + app.getClass().getCanonicalName() + " is null");
+		}
+		
+		ApplicationService appService = getServiceManager().getService(ApplicationService.class);
+		ApplicationData data = appService.getByIdentifier(app.getIdentifier());
+		
+		if(data == null) {
+			throw new IllegalArgumentException("App " + app.getIdentifier() + " is not installed");
+		}
+		
+		ApplicationContext ctx = new ApplicationContextImpl(this.sessionFactory, this.authFactory, this.serviceMan, this.templateManager);
+		ctx.setModule(app);
+		
+		ServletRegistrationAdapter adapter = this.server.getServletRegistration(ctx);
+		ctx.setServletRegistration(adapter);
+		
+		return ctx;
 	}
 
 }

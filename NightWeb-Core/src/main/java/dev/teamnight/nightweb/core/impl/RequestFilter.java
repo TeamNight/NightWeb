@@ -23,6 +23,7 @@ import dev.teamnight.nightweb.core.ApplicationContext;
 import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightWeb;
+import dev.teamnight.nightweb.core.RequestContext;
 import dev.teamnight.nightweb.core.entities.ApplicationData;
 import dev.teamnight.nightweb.core.entities.SystemSetting;
 import dev.teamnight.nightweb.core.service.SettingService;
@@ -73,6 +74,10 @@ public class RequestFilter implements Filter {
 			HttpServletResponse httpResponse = (HttpServletResponse) response;
 			
 			Authenticator auth = ctx.getAuthenticator(httpRequest.getSession());
+			
+			//Setting thread-locals for easy access
+			RequestContext.setModuleContext(this.ctx);
+			RequestContext.setAuthenticator(auth);
 			
 			SystemSetting forceLogin = setServ.getByKey("forceLogin");
 			if(forceLogin != null && forceLogin.getAsBoolean()) {

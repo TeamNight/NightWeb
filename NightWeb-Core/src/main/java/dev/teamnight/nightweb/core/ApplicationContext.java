@@ -5,8 +5,9 @@ package dev.teamnight.nightweb.core;
 
 import javax.servlet.http.HttpServlet;
 
-import org.eclipse.jetty.servlet.ServletHolder;
 import org.hibernate.SessionFactory;
+
+import dev.teamnight.nightweb.core.util.ServletBuilder;
 
 public interface ApplicationContext extends Context {
 
@@ -18,19 +19,23 @@ public interface ApplicationContext extends Context {
 	public SessionFactory getSessionFactory();
 	
 	/**
+	 * @return {@link dev.teamnight.nightweb.core.ServletRegistrationAdapter} the adapter
+	 */
+	public ServletRegistrationAdapter getServletRegistrationAdapter();
+	
+	/**
 	 * Registers a servlet with the specified context in order to associate a servlet holder with a context
 	 * @param servlet
 	 * @param pathSpec
 	 * @param ctx
 	 */
-	public void registerServlet(Class<? extends HttpServlet> servlet, String pathSpec, Context ctx);
+	public void addServlet(ServletBuilder builder, String pathSpec, Context ctx);
 	
 	/**
-	 * Registers a servlet holder
+	 * Sets the servlet registration adapter, needed by the context.
 	 * 
-	 * @param holder
-	 * @param pathSpec
+	 * @param {@link dev.teamnight.nightweb.core.ServletRegistrationAdapter} the adapter
 	 */
-	public void registerServletHolder(ServletHolder holder, String pathSpec);
+	public void setServletRegistration(ServletRegistrationAdapter adapter);
 	
 }

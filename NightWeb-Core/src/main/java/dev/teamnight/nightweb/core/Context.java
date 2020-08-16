@@ -16,6 +16,7 @@ import dev.teamnight.nightweb.core.mvc.Router;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 import dev.teamnight.nightweb.core.template.TemplateBuilder;
 import dev.teamnight.nightweb.core.template.TemplateManager;
+import dev.teamnight.nightweb.core.util.ServletBuilder;
 
 public interface Context {
 	
@@ -38,7 +39,7 @@ public interface Context {
 	 * 
 	 * @param servlet
 	 */
-	public void registerServlet(Class<? extends HttpServlet> servlet);
+	public void addServlet(Class<? extends HttpServlet> servlet);
 	
 	/**
 	 * Registers a servlet using a path specification.
@@ -48,9 +49,21 @@ public interface Context {
 	 * @see Context#registerServlet(Class)
 	 * 
 	 * @param servlet
-	 * @param pathInfo
+	 * @param pathSpec
 	 */
-	public void registerServlet(Class<? extends HttpServlet> servlet, String pathSpec);
+	public void addServlet(Class<? extends HttpServlet> servlet, String pathSpec);
+	
+	/**
+	 * Registers a servlet using a path specification.
+	 * 
+	 * <p>Do not requires the WebServlet annotation<p>
+	 * 
+	 * @see Context#registerServlet(Class)
+	 * 
+	 * @param {@link dev.teamnight.nightweb.core.util.ServletBuilder}
+	 * @param pathSpec
+	 */
+	public void addServlet(ServletBuilder builder, String pathSpec);
 	
 	/**
 	 * Registers a controller in the router

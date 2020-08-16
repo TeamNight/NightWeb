@@ -19,7 +19,7 @@ public abstract class Controller {
 		this.context = ctx;
 	}
 	
-	public Context getContext() {
+	protected Context getContext() {
 		return this.context;
 	}
 	

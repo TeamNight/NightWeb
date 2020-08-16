@@ -41,7 +41,7 @@ public class Menu {
 	private String identifier;
 	
 	@OneToMany(fetch = FetchType.EAGER, mappedBy = "menu", cascade = CascadeType.ALL, orphanRemoval = true)
-	@Where(clause = "parentId = null")
+	@Where(clause = "parentId is null")
 	@OrderBy("order ASC")
 	private List<MenuItem> nodes = new ArrayList<MenuItem>();
 	

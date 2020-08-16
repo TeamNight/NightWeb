@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.servlet.GenericServlet;
 import javax.servlet.ServletException;
@@ -142,6 +141,11 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 		try {
 			Result result = holder.executeMethod(req, res, params);
 			
+			if(result.redirect().isPresent()) {
+				res.sendRedirect(result.redirect().get());
+				return;
+			}
+			
 			if(result.status() > 399) {
 				if(result.statusMessage().isPresent()) {
 					res.sendError(result.status(), result.statusMessage().get());
@@ -163,8 +167,12 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 			
 			result.cookies().forEach(cookie -> res.addCookie(cookie));
 			result.headers().forEach((name, value) -> res.addHeader(name, value));
-		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+		} catch (IllegalAccessException e) {
+			LOGGER.error("Unable to access method " + holder.getController().getClass().getCanonicalName() + "." + holder.getMethod().getName() + " - maybe it is private or not exported?");
+		} catch (IllegalArgumentException e) {
 			throw new ServletException(e);
+		} catch (InvocationTargetException e) {
+			throw new ServletException(e.getCause());
 		}
 	}
 	
@@ -295,7 +303,7 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 		
 		NightWeb.getEventManager().fireEvent(new RouteAddedEvent(holder));
 		
-		LOGGER.info("Registering route \00BB" + holder.getPathSpec() + "\00AB using Method " + holder.getHttpMethod() + "");
+		LOGGER.info("Registering route »" + holder.getPathSpec() + "« using Method " + holder.getHttpMethod() + "");
 		
 		this.routes.add(holder);
 	}

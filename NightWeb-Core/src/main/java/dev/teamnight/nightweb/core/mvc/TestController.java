@@ -15,6 +15,7 @@ import org.apache.logging.log4j.Logger;
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.annotations.Authenticated;
 import dev.teamnight.nightweb.core.mvc.annotations.Accepts;
+import dev.teamnight.nightweb.core.mvc.annotations.Authorized;
 import dev.teamnight.nightweb.core.mvc.annotations.GET;
 import dev.teamnight.nightweb.core.mvc.annotations.Method;
 import dev.teamnight.nightweb.core.mvc.annotations.POST;
@@ -60,6 +61,7 @@ public class TestController extends Controller {
 	}
 	
 	@GET
+	@Authorized("nightweb.moderator.canSuspendUsers")
 	@Path("/index/:username")
 	public Result indexAction(@PathParam("username") String username) {
 		return ok("Hello, " + username);

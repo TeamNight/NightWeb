@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import dev.teamnight.nightweb.core.Server;
+
 /**
  * The PathResolver will create a pattern for a path spec
  *  and will extract the path parameters from a httpRequest URL
@@ -32,6 +34,12 @@ public class PathResolver {
 	}
 	
 	public PathResolver(String paramPrefix, String paramSuffix) {
+		this.prefix = paramPrefix;
+		this.suffix = paramSuffix;
+		this.paramPattern = Pattern.compile(paramPrefix + "[a-zA-Z0-9_.-]+" + paramSuffix);
+	}
+	
+	public PathResolver(Server server, String paramPrefix, String paramSuffix) {
 		this.prefix = paramPrefix;
 		this.suffix = paramSuffix;
 		this.paramPattern = Pattern.compile(paramPrefix + "[a-zA-Z0-9_.-]+" + paramSuffix);

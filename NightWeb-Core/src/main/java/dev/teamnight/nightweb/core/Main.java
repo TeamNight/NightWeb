@@ -3,8 +3,8 @@
  */
 package dev.teamnight.nightweb.core;
 
-import dev.teamnight.nightweb.core.impl.JettyServer;
 import dev.teamnight.nightweb.core.impl.NightWebCoreImpl;
+import dev.teamnight.nightweb.core.impl.jetty.JettyServer;
 
 public class Main {
 

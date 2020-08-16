@@ -1,10 +1,12 @@
 /**
  * Copyright (c) 2020 Jonas Müller, Jannik Müller
  */
-package dev.teamnight.nightweb.core.impl;
+package dev.teamnight.nightweb.core.impl.jetty;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -27,26 +29,27 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
+import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.SecuredRedirectHandler;
 import org.eclipse.jetty.server.session.DefaultSessionIdManager;
 import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlet.ServletMapping;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.hibernate.SessionFactory;
 
-import dev.teamnight.nightweb.core.Application;
 import dev.teamnight.nightweb.core.ApplicationContext;
-import dev.teamnight.nightweb.core.AuthenticatorFactory;
 import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.Server;
-import dev.teamnight.nightweb.core.entities.ApplicationData;
+import dev.teamnight.nightweb.core.ServletRegistrationAdapter;
 import dev.teamnight.nightweb.core.entities.XmlConfiguration;
 import dev.teamnight.nightweb.core.events.ServerStartedEvent;
-import dev.teamnight.nightweb.core.service.ApplicationService;
+import dev.teamnight.nightweb.core.impl.NightWebCoreImpl;
+import dev.teamnight.nightweb.core.mvc.Router;
 import dev.teamnight.nightweb.core.util.StringUtil;
 
 public class JettyServer implements Server, HttpSessionListener, HttpSessionIdListener {
@@ -59,19 +62,17 @@ public class JettyServer implements Server, HttpSessionListener, HttpSessionIdLi
 	private ReentrantLock sessionIdsLock = new ReentrantLock();
 	
 	private ContextHandlerCollection servletContextHandlers = new ContextHandlerCollection();
+	private Map<ApplicationContext, JettyServletRegistrationAdapter> servletRegistrationAdapters = new HashMap<ApplicationContext, JettyServletRegistrationAdapter>();
 	
 	private XmlConfiguration conf;
 	
 	private NightWebCore core;
-	private AuthenticatorFactory authFactory;
 	
 	private SessionFactory sessionFactory;
 	
 	public JettyServer(NightWebCore core, XmlConfiguration conf) {
 		this.core = core;
 		this.conf = conf;
-		
-		this.authFactory = new AuthenticatorFactory(SessionAuthenticator.class);
 		
 		//Thread pool for connectors
 		QueuedThreadPool threadPool = new QueuedThreadPool(conf.getMaxThreads(), conf.getMinThreads());
@@ -121,7 +122,11 @@ public class JettyServer implements Server, HttpSessionListener, HttpSessionIdLi
 			handlers.addHandler(sslRedirectHandler);
 		}
 		
-		handlers.addHandler(this.servletContextHandlers);
+		HandlerCollection handlingProcessCollection = new HandlerCollection();
+		handlingProcessCollection.addHandler(this.servletContextHandlers);
+		handlingProcessCollection.addHandler(new PostHandler());
+		
+		handlers.addHandler(handlingProcessCollection);
 		
 		server.setHandler(handlers);
 		server.setRequestLog(new CustomRequestLog(new Log4jRequestLogWriter(JettyServer.class), JettyServer.RequestLogFormat));
@@ -142,6 +147,7 @@ public class JettyServer implements Server, HttpSessionListener, HttpSessionIdLi
 		
 		try {
 			this.server.start();
+			this.servletRegistrationAdapters.values().forEach(adapter -> adapter.updatePathRegistry());
 			
 			LOGGER.info("Press CTRL+C to stop the server");
 			Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -221,26 +227,20 @@ public class JettyServer implements Server, HttpSessionListener, HttpSessionIdLi
 			}
 		}
 	}
-
+	
 	@Override
-	public ApplicationContext getContext(Application app) throws IllegalArgumentException {
-		if(app.getIdentifier() == null) {
-			throw new IllegalArgumentException("Identifier for " + app.getClass().getCanonicalName() + " is null");
+	public ServletRegistrationAdapter getServletRegistration(ApplicationContext appContext)
+			throws IllegalArgumentException {
+		if(appContext.getModuleIdentifier() == null) {
+			throw new IllegalArgumentException("Identifier for " + appContext + " is null");
 		}
 		
-		ApplicationService appService = this.core.getServiceManager().getService(ApplicationService.class);
-		ApplicationData data = appService.getByIdentifier(app.getIdentifier());
-		
-		if(data == null) {
-			throw new IllegalArgumentException("App " + app.getIdentifier() + " is not installed");
-		}
-		
-		LOGGER.debug("Initialiazing ServletContextHandler with contextPath=" + data.getContextPath() + " for application " + data.getIdentifier());
+		LOGGER.debug("Initialiazing ServletContextHandler with contextPath=" + appContext.getContextPath() + " for application " + appContext.getModuleIdentifier());
 		
 		ServletContextHandler handler = new ServletContextHandler(ServletContextHandler.SESSIONS);
-		handler.setInitParameter("org.eclipse.jetty.servlet.SessionCookie", app.getIdentifier() + ".session");
+		handler.setInitParameter("org.eclipse.jetty.servlet.SessionCookie", "dev.teamnight.nightweb.core.session");
 		handler.setInitParameter("org.eclipse.jetty.servlet.SessionIdPathParameterName", "none");
-		handler.setContextPath(data.getContextPath());
+		handler.setContextPath(appContext.getContextPath());
 		handler.setErrorHandler(this.server.getErrorHandler());
 		handler.getServletHandler().setServletMappings(new ServletMapping[] {}); //to fix a bug in getServletURL
 		
@@ -250,12 +250,12 @@ public class JettyServer implements Server, HttpSessionListener, HttpSessionIdLi
 		sessions.addEventListener(this);
 		handler.setSessionHandler(sessions);
 		
-		ApplicationContext ctx = new JettyApplicationContext(handler, this.sessionFactory, this.authFactory, this.core.getServiceManager(), this.core.getTemplateManager());
-		ctx.setModule(app);
+		JettyServletRegistrationAdapter adapter = new JettyServletRegistrationAdapter(handler);
+		adapter.setPathRegistry(this.core.getPathRegistry());
 		
-		this.servletContextHandlers.addHandler(handler);
+		this.servletRegistrationAdapters.put(appContext, adapter);
 		
-		return ctx;
+		return adapter;
 	}
 	
 	@Override
@@ -273,20 +273,28 @@ public class JettyServer implements Server, HttpSessionListener, HttpSessionIdLi
 			}
 			ServletContextHandler ctxHandler = (ServletContextHandler) handler;
 			
-			LOGGER.debug("ServletContextHandler " + ctxHandler.getContextPath());
-			LOGGER.debug("ServletMappings not null: " + (ctxHandler.getServletHandler().getServletMappings() != null));
-			
-			try {
-				throw new RuntimeException("test");
-			} catch(Exception e) {
-				e.printStackTrace();
-			}
-			
+			//Check servlets
 			for(ServletMapping map : ctxHandler.getServletHandler().getServletMappings()) {
 				if(map.getServletName().startsWith(servletClass)) {
 					url = map.getPathSpecs()[0].replace("/*", "");
 					
 					url = StringUtil.filterURL(ctxHandler.getContextPath() + url);
+				}
+			}
+			
+			//Check Router
+			if(url == null) {
+				ServletHolder holder = ctxHandler.getServletHandler().getServlet("Router");
+				
+				if(holder == null ||
+						holder.getServletInstance() == null) {
+					return null;
+				}
+				
+				if(holder.getServletInstance() instanceof Router) {
+					Router router = (Router) holder.getServletInstance();
+					
+					return router.getPath(servletClass);
 				}
 			}
 		}

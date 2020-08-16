@@ -40,12 +40,12 @@ public abstract class JavaModule implements NightModule {
 
 	@Override
 	public void addServlet(Class<? extends HttpServlet> servlet) throws IllegalArgumentException {
-		this.context.registerServlet(servlet);
+		this.context.addServlet(servlet);
 	}
 
 	@Override
 	public void addServlet(Class<? extends HttpServlet> servlet, String pathSpec) {
-		this.context.registerServlet(servlet, pathSpec);
+		this.context.addServlet(servlet, pathSpec);
 	}
 
 	@Override

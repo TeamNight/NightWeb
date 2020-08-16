@@ -3,9 +3,7 @@
  */
 package dev.teamnight.nightweb.core.impl;
 
-import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
 import org.apache.logging.log4j.LogManager;
@@ -21,6 +19,7 @@ import dev.teamnight.nightweb.core.mvc.Router;
 import dev.teamnight.nightweb.core.service.ServiceManager;
 import dev.teamnight.nightweb.core.template.TemplateBuilder;
 import dev.teamnight.nightweb.core.template.TemplateManager;
+import dev.teamnight.nightweb.core.util.ServletBuilder;
 
 public class ModuleContext implements Context {
 
@@ -43,21 +42,20 @@ public class ModuleContext implements Context {
 	public String getModuleIdentifier() {
 		return this.module.getIdentifier();
 	}
-
+	
 	@Override
-	public void registerServlet(Class<? extends HttpServlet> servlet) {
-		WebServlet webServlet = servlet.getAnnotation(WebServlet.class);
-		
-		if(webServlet == null) {
-			throw new IllegalArgumentException("WebServlet annotation is missing on " + servlet.getCanonicalName());
-		}
-		
-		this.appContext.registerServlet(servlet, null, this);
+	public void addServlet(Class<? extends HttpServlet> servlet) {
+		appContext.addServlet(servlet);
 	}
-
+	
 	@Override
-	public void registerServlet(Class<? extends HttpServlet> servlet, String pathInfo) {
-		this.appContext.registerServlet(servlet, pathInfo, this);
+	public void addServlet(Class<? extends HttpServlet> servlet, String pathSpec) {
+		appContext.addServlet(servlet, pathSpec);
+	}
+	
+	@Override
+	public void addServlet(ServletBuilder builder, String pathSpec) {
+		appContext.addServlet(builder, pathSpec);
 	}
 	
 	@Override

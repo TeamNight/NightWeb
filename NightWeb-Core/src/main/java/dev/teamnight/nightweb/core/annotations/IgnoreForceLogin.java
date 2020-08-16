@@ -7,6 +7,4 @@ package dev.teamnight.nightweb.core.annotations;
  * @author Jonas
  *
  */
-public class IgnoreForceLogin {
-
-}
+public @interface IgnoreForceLogin {}

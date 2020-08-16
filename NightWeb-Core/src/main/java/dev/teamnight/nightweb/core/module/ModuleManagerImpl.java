@@ -302,7 +302,7 @@ public class ModuleManagerImpl implements ModuleManager {
 			
 			ApplicationContext ctx = null;
 			try {
-				ctx = this.core.getServer().getContext(app);
+				ctx = this.core.getContext(app);
 			} catch(IllegalArgumentException e) {
 				e.printStackTrace();
 				return false;

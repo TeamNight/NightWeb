@@ -115,6 +115,20 @@ public interface NightWebCore {
 	public PermissionService getPermissionService();
 	
 	/**
+	 * Gets the global gson instance
+	 * 
+	 * @return
+	 */
+	public Gson getGson();
+	
+	/**
+	 * Gets the global path registry.
+	 * 
+	 * @return {@link dev.teamnight.nightweb.core.PathRegistry} the path registry
+	 */
+	public PathRegistry getPathRegistry();
+	
+	/**
 	 * Returns a list of all active sessions of the web server
 	 * 
 	 * @return List of {@link javax.servlet.http.HttpSession}
@@ -142,8 +156,15 @@ public interface NightWebCore {
 	public ModuleData getModuleData(NightModule module);
 	
 	/**
-	 * Gets the global gson instance
-	 * @return
+	 * Creates an instance of ApplicationContext suitable for application.
+	 * The ApplicationContext implementation shall be able to register Servlets so that
+	 * Applications and Modules can register them.
+	 * 
+	 * @param {@link dev.teamnight.nightweb.core.Application} the Application to get an ApplicationContext
+	 * 
+	 * @return {@link dev.teamnight.nightweb.core.ApplicationContext} the context
+	 * 
+	 * @throws IllegalArgumentException if there is already an ApplicationContext set or if the Application is not registered in the Database
 	 */
-	public Gson getGson();
+	public ApplicationContext getContext(Application app) throws IllegalArgumentException;
 }

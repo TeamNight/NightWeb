@@ -38,12 +38,12 @@ public abstract class Application implements NightModule {
 
 	@Override
 	public void addServlet(Class<? extends HttpServlet> servlet) {
-		this.context.registerServlet(servlet);
+		this.context.addServlet(servlet);
 	}
 
 	@Override
 	public void addServlet(Class<? extends HttpServlet> servlet, String pathSpec) {
-		this.context.registerServlet(servlet, pathSpec);
+		this.context.addServlet(servlet, pathSpec);
 	}
 
 	@Override

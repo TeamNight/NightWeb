@@ -27,6 +27,7 @@ import dev.teamnight.nightweb.core.mvc.Router;
 import dev.teamnight.nightweb.core.mvc.ServletRouterImpl;
 import dev.teamnight.nightweb.core.util.StringUtil;
 import dev.teamnight.nightweb.core.Context;
+import dev.teamnight.nightweb.core.impl.ApplicationContextImpl;
 import dev.teamnight.nightweb.core.mvc.Controller;
 import dev.teamnight.nightweb.core.mvc.MethodHolder;
 import dev.teamnight.nightweb.core.mvc.PathResolver;
@@ -38,7 +39,7 @@ import dev.teamnight.nightweb.core.mvc.PathResolver;
 public class RouterTest {
 
 	private PathResolver resolver = new PathResolver();
-	private Context ctx = new TestApplicationContext();
+	private Context ctx = new ApplicationContextImpl(null, null, null, null);
 	
 	@Test
 	public void testPathResolver() {

@@ -66,7 +66,7 @@ public class AuthorizationFilter implements SecurityFilter {
 			
 			Authenticator auth = ctx.getAuthenticator(req.getSession());
 			
-			if(!auth.isAuthenticated()) {
+			if(auth.isAuthenticated()) {
 				user = auth.getUser();
 			} else {
 				user = new User("guest", "guest"); //TODO: Replace with default user
