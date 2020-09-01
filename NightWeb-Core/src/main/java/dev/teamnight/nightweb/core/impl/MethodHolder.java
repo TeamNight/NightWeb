@@ -1,26 +1,32 @@
 /**
  * Copyright (c) 2020 Jonas Müller, Jannik Müller
  */
-package dev.teamnight.nightweb.core.mvc;
+package dev.teamnight.nightweb.core.impl;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import dev.teamnight.nightweb.core.Context;
+import dev.teamnight.nightweb.core.mvc.Controller;
+import dev.teamnight.nightweb.core.mvc.InvokedRoute;
+import dev.teamnight.nightweb.core.mvc.RequestParameter;
+import dev.teamnight.nightweb.core.mvc.Result;
 
 /**
  * @author Jonas
  *
  */
-public class MethodHolder {
+public class MethodHolder implements InvokedRoute {
 
 	private Method invokeMethod;
 	private Controller controller;
@@ -51,7 +57,8 @@ public class MethodHolder {
 		this.produces = "text/html";
 	}
 	
-	public Result executeMethod(HttpServletRequest req, HttpServletResponse res, Map<RequestParameter, String> parameters) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+	@Override
+	public Result execute(HttpServletRequest req, HttpServletResponse res, Map<RequestParameter, String> parameters) throws ServletException {
 		int paramsSize = parameters.size();
 		
 		if(this.posReq > -1) {
@@ -87,7 +94,12 @@ public class MethodHolder {
 			args[pos] = entry.getValue();
 		}
 		
-		Object value = this.invokeMethod.invoke(this.controller, args);
+		Object value;
+		try {
+			value = this.invokeMethod.invoke(this.controller, args);
+		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+			throw new ServletException(e);
+		}
 		
 		Result result = null;
 		
@@ -107,98 +119,17 @@ public class MethodHolder {
 		
 		return result;
 	}
-	
-	/**
-	 * @return the ctx
-	 */
-	public Context getContext() {
-		return ctx;
-	}
-	
-	/**
-	 * @return the invokeMethod
-	 */
-	public Method getMethod() {
-		return invokeMethod;
-	}
-	
-	/**
-	 * @return the controller
-	 */
-	public Controller getController() {
-		return controller;
+
+	@Override
+	public Optional<Controller> getController() {
+		return Optional.of(this.controller);
 	}
 
-	/**
-	 * @return the pathSpec
-	 */
+	@Override
 	public String getPathSpec() {
-		return pathSpec;
-	}
-
-	/**
-	 * @return the regex
-	 */
-	public Pattern getRegex() {
-		return regex;
-	}
-
-	/**
-	 * @return the httpMethod
-	 */
-	public String getHttpMethod() {
-		return httpMethod;
+		return this.pathSpec;
 	}
 	
-	/**
-	 * @return the accepts
-	 */
-	public Optional<String> getAccepts() {
-		return Optional.ofNullable(this.accepts);
-	}
-	
-	/**
-	 * @return the produces
-	 */
-	public String getProduces() {
-		return this.produces;
-	}
-
-	/**
-	 * @return the parameters
-	 */
-	public Map<RequestParameter, Integer> getParameters() {
-		return parameters;
-	}
-
-	/**
-	 * @return the posReq
-	 */
-	public int getPosReq() {
-		return posReq;
-	}
-
-	/**
-	 * @return the posRes
-	 */
-	public int getPosRes() {
-		return posRes;
-	}
-
-	/**
-	 * @return the posCtx
-	 */
-	public int getPosCtx() {
-		return posCtx;
-	}
-
-	/**
-	 * @return the posParamMap
-	 */
-	public int getPosParamMap() {
-		return posParamMap;
-	}
-
 	/**
 	 * @param pathSpec the pathSpec to set
 	 */
@@ -206,18 +137,33 @@ public class MethodHolder {
 		this.pathSpec = pathSpec;
 	}
 
+	@Override
+	public Pattern getCompiledPathSpec() {
+		return this.regex;
+	}
+	
 	/**
 	 * @param regex the regex to set
 	 */
-	public void setRegex(Pattern regex) {
+	public void setCompiledPathSpec(Pattern regex) {
 		this.regex = regex;
 	}
 
+	@Override
+	public String getHttpMethod() {
+		return this.httpMethod;
+	}
+	
 	/**
 	 * @param httpMethod the httpMethod to set
 	 */
 	public void setHttpMethod(String httpMethod) {
 		this.httpMethod = httpMethod;
+	}
+
+	@Override
+	public Optional<String> getAccepts() {
+		return Optional.ofNullable(this.accepts);
 	}
 	
 	/**
@@ -226,6 +172,11 @@ public class MethodHolder {
 	public void setAccepts(String accepts) {
 		this.accepts = accepts;
 	}
+
+	@Override
+	public String getProduces() {
+		return this.produces;
+	}
 	
 	/**
 	 * @param produces the produces to set
@@ -233,7 +184,12 @@ public class MethodHolder {
 	public void setProduces(String produces) {
 		this.produces = produces;
 	}
-
+	
+	@Override
+	public Map<RequestParameter, Integer> getParameters() {
+		return Collections.unmodifiableMap(this.parameters);
+	}
+	
 	/**
 	 * @param parameters the parameters to set
 	 */
@@ -241,27 +197,47 @@ public class MethodHolder {
 		this.parameters = parameters;
 	}
 
+	@Override
+	public Class<?> getUnderlyingClass() {
+		return this.controller.getClass();
+	}
+
+	@Override
+	public Method getUnderlyingMethod() {
+		return this.invokeMethod;
+	}
+
+	@Override
+	public String getUnderlyingClassName() {
+		return this.controller.getClass().getCanonicalName();
+	}
+
+	@Override
+	public String getUnderlyingMethodName() {
+		return this.invokeMethod.getName();
+	}
+	
 	/**
 	 * @param posReq the posReq to set
 	 */
 	public void setPosReq(int posReq) {
 		this.posReq = posReq;
 	}
-
+	
 	/**
 	 * @param posRes the posRes to set
 	 */
 	public void setPosRes(int posRes) {
 		this.posRes = posRes;
 	}
-
+	
 	/**
 	 * @param posCtx the posCtx to set
 	 */
 	public void setPosCtx(int posCtx) {
 		this.posCtx = posCtx;
 	}
-
+	
 	/**
 	 * @param posParamMap the posParamMap to set
 	 */

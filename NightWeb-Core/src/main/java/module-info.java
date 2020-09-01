@@ -28,8 +28,8 @@ module dev.teamnight.nightweb.core {
 	requires org.eclipse.jetty.server;
 	requires transitive org.eclipse.jetty.servlet;
 	requires org.eclipse.jetty.util;
-	requires transitive log4j.api;
-	requires log4j.core;
+	requires transitive org.apache.logging.log4j;
+	requires org.apache.logging.log4j.core;
 	requires transitive org.hibernate.orm.core;
 	
 	//For Hibernate
@@ -41,4 +41,5 @@ module dev.teamnight.nightweb.core {
 	requires java.sql;
 	requires org.eclipse.jetty.http;
 	requires gson;
+
 }

@@ -20,12 +20,12 @@ import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightModule;
 import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.NightWebCore;
-import dev.teamnight.nightweb.core.PathParameters;
 import dev.teamnight.nightweb.core.annotations.AdminServlet;
 import dev.teamnight.nightweb.core.entities.ModuleData;
 import dev.teamnight.nightweb.core.impl.NightWebCoreImpl;
 import dev.teamnight.nightweb.core.module.ModuleManager;
 import dev.teamnight.nightweb.core.service.ModuleService;
+import dev.teamnight.nightweb.core.util.PathParameters;
 /**
  * @author Jonas
  *

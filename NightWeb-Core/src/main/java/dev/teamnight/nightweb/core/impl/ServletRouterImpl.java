@@ -1,10 +1,9 @@
 /**
  * Copyright (c) 2020 Jonas Müller, Jannik Müller
  */
-package dev.teamnight.nightweb.core.mvc;
+package dev.teamnight.nightweb.core.impl;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
@@ -31,6 +30,16 @@ import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.annotations.Authenticated;
 import dev.teamnight.nightweb.core.events.RouteAddedEvent;
+import dev.teamnight.nightweb.core.mvc.Controller;
+import dev.teamnight.nightweb.core.mvc.FilterEntry;
+import dev.teamnight.nightweb.core.mvc.InvokedRoute;
+import dev.teamnight.nightweb.core.mvc.PathResolver;
+import dev.teamnight.nightweb.core.mvc.RequestParameter;
+import dev.teamnight.nightweb.core.mvc.Result;
+import dev.teamnight.nightweb.core.mvc.Route;
+import dev.teamnight.nightweb.core.mvc.RouteQuery;
+import dev.teamnight.nightweb.core.mvc.Router;
+import dev.teamnight.nightweb.core.mvc.SecurityFilter;
 import dev.teamnight.nightweb.core.mvc.annotations.Accepts;
 import dev.teamnight.nightweb.core.mvc.annotations.Authorized;
 import dev.teamnight.nightweb.core.mvc.annotations.GET;
@@ -55,7 +64,7 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 	private Context ctx;
 	private PathResolver pathResolver;
 	
-	private List<MethodHolder> routes = new ArrayList<MethodHolder>();
+	private List<Route> routes = new ArrayList<Route>();
 	private List<Controller> controllers = new ArrayList<Controller>();
 
 	private SecurityFilter authFilter;
@@ -94,24 +103,24 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 		String url = req.getPathInfo();
 		List<String> acceptHeaders = StringUtil.parseAcceptHeader(req.getHeader("Accept") == null ? "" : req.getHeader("Accept"));
 		
-		MethodHolder holder = null;
+		Route route = null;
 		RouteQuery query = RouteQuery.of(url).method(req.getMethod()).accepts(req.getContentType());
 		
 		if(!acceptHeaders.isEmpty()) {
 			for(String acceptHeader : acceptHeaders) {
 				query.produces(acceptHeader);
 				
-				holder = this.getMethodByURL(query);
+				route = this.getRouteByURL(query);
 				
-				if(holder != null) {
+				if(route != null) {
 					break;
 				}
 			}
 		} else {
-			holder = this.getMethodByURL(query);
+			route = this.getRouteByURL(query);
 		}
 		
-		if(holder == null) {
+		if(route == null) {
 			String failureReason = this.getFailureReason(query);
 			
 			switch(failureReason) {
@@ -134,12 +143,12 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 		}
 		
 		Map<RequestParameter, String> params = this.pathResolver.resolvePathParameters(
-				holder.getRegex(), 
-				holder.getParameters().keySet().toArray(new RequestParameter[holder.getParameters().size()]), 
+				route.getCompiledPathSpec(), 
+				route.getParameters().keySet().toArray(new RequestParameter[route.getParameters().size()]), 
 				url);
 		
 		try {
-			Result result = holder.executeMethod(req, res, params);
+			Result result = route.execute(req, res, params);
 			
 			if(result.redirect().isPresent()) {
 				res.sendRedirect(result.redirect().get());
@@ -167,12 +176,14 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 			
 			result.cookies().forEach(cookie -> res.addCookie(cookie));
 			result.headers().forEach((name, value) -> res.addHeader(name, value));
-		} catch (IllegalAccessException e) {
-			LOGGER.error("Unable to access method " + holder.getController().getClass().getCanonicalName() + "." + holder.getMethod().getName() + " - maybe it is private or not exported?");
-		} catch (IllegalArgumentException e) {
-			throw new ServletException(e);
-		} catch (InvocationTargetException e) {
-			throw new ServletException(e.getCause());
+		} catch (ServletException e) {
+			if(e.getCause() instanceof IllegalAccessException) {
+				InvokedRoute invokedRoute = (InvokedRoute) route;
+				
+				LOGGER.error("Unable to access method " + route.getController().getClass().getCanonicalName() + "." + invokedRoute.getUnderlyingMethodName() + " - maybe it is private or not exported?");
+			} else {
+				throw e;
+			}
 		}
 	}
 	
@@ -210,7 +221,7 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 		Path controllerPath = controller.getClass().getAnnotation(Path.class);
 		
 		holder.setPathSpec(StringUtil.filterURL((controllerPath == null ? "" : controllerPath.value()) + pathAnnotation.value()));
-		holder.setRegex(this.pathResolver.compilePathSpec(pathAnnotation.value()));
+		holder.setCompiledPathSpec(this.pathResolver.compilePathSpec(pathAnnotation.value()));
 		
 		dev.teamnight.nightweb.core.mvc.annotations.Method methodAnnotation = method.getAnnotation(dev.teamnight.nightweb.core.mvc.annotations.Method.class);
 		if(methodAnnotation != null) {
@@ -277,39 +288,46 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 		
 		holder.setParameters(parametersMap);
 		
+		this.addRoute(holder);
+	}
+	
+	@Override
+	public void addRoute(Route route) {
 		FilterEntry entry = new FilterEntry(
-				this.pathResolver.compilePathSpec(StringUtil.filterURL(this.getContextPath() + holder.getPathSpec())).pattern(), 
-				holder.getHttpMethod()
+				this.pathResolver.compilePathSpec(StringUtil.filterURL(this.getContextPath() + route.getPathSpec())).pattern(), 
+				route.getHttpMethod()
 				);
-		entry.addProduces(holder.getProduces());
+		entry.addProduces(route.getProduces());
 		
-		if(holder.getAccepts().isPresent()) {
-			entry.addAccepts(holder.getAccepts().get());
+		if(route.getAccepts().isPresent()) {
+			entry.addAccepts(route.getAccepts().get());
 		}
 		
+		Class<?> routeClass = route.getClass();
+		
 		//Authenticated annotation
-		Authenticated authAnnotation = method.getAnnotation(Authenticated.class);
+		Authenticated authAnnotation = routeClass.getAnnotation(Authenticated.class);
 		if(authAnnotation != null) {
 			this.authFilter.addPattern(entry);
 		}
 		
 		//Authorization annotation
-		Authorized authorizedAnnotation = method.getAnnotation(Authorized.class);
+		Authorized authorizedAnnotation = routeClass.getAnnotation(Authorized.class);
 		if(authorizedAnnotation != null) {
 			entry.addAttribute("dev.teamnight.nightweb.core.permission", authorizedAnnotation.value());
 			
 			this.adminFilter.addPattern(entry);
 		}
 		
-		NightWeb.getEventManager().fireEvent(new RouteAddedEvent(holder));
+		LOGGER.info("Registering route »" + route.getPathSpec() + "« using Method " + route.getHttpMethod() + "");
 		
-		LOGGER.info("Registering route »" + holder.getPathSpec() + "« using Method " + holder.getHttpMethod() + "");
+		this.routes.add(route);
 		
-		this.routes.add(holder);
+		NightWeb.getEventManager().fireEvent(new RouteAddedEvent(this.ctx, route));
 	}
 	
 	@Override
-	public List<MethodHolder> getRoutes() {
+	public List<Route> getRoutes() {
 		return Collections.unmodifiableList(this.routes);
 	}
 	
@@ -336,13 +354,13 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 	
 	@Override
 	public String getPath(Controller controller, Method method) {
-		MethodHolder holder = this.routes.stream().filter(h -> h.getMethod().equals(method)).findAny().orElse(null);
+		Route route = this.routes.stream().filter(h -> h.getHttpMethod().equals(method)).findAny().orElse(null);
 		
-		if(holder == null) {
+		if(route == null) {
 			return null;
 		}
 		
-		return StringUtil.filterURL(this.ctx.getContextPath() + holder.getPathSpec());
+		return StringUtil.filterURL(this.ctx.getContextPath() + route.getPathSpec());
 	}
 	
 	@Override
@@ -354,28 +372,26 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 		
 		String controllerName = String.join(".", contents);
 		
-		for(MethodHolder holder : this.routes) {
-			if(holder.getController().getClass().getCanonicalName().equals(controllerName)) {
-				if(holder.getMethod().getName().equals(methodName)) {
-					return StringUtil.filterURL(this.ctx.getContextPath() + holder.getPathSpec());
+		for(Route route : this.routes) {
+			if(route instanceof InvokedRoute) {
+				InvokedRoute invokedRoute = (InvokedRoute) route;
+				
+				if(invokedRoute.getUnderlyingClassName().equalsIgnoreCase(controllerName)) {
+					if(invokedRoute.getUnderlyingMethodName().equalsIgnoreCase(methodName)) {
+						return StringUtil.filterURL(this.ctx.getContextPath() + route.getPathSpec());
+					}
 				}
 			}
 		}
 		
-		return this.getContextPath();
+		return null;
 	}
 	
 	@Override
 	public Controller getControllerByURL(String url) {
-		MethodHolder holder = this.routes.stream().filter(h -> h.getRegex().matcher(url).matches()).findAny().orElse(null);
+		Route holder = this.routes.stream().filter(h -> h.getCompiledPathSpec().matcher(url).matches()).findAny().orElse(null);
 		
-		Controller c = null;
-		
-		if(holder != null) {
-			c = holder.getController();
-		}
-		
-		if(c == null) {
+		if(holder.getController().isEmpty()) {
 			for(Controller controller : this.controllers) {
 				Path path = controller.getClass().getAnnotation(Path.class);
 				if(path != null) {
@@ -391,7 +407,7 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 	}
 	
 	public String getFailureReason(RouteQuery query) {
-		List<MethodHolder> holders = this.routes.stream().filter(h -> h.getRegex().matcher(query.url()).matches()).collect(Collectors.toList());
+		List<Route> holders = this.routes.stream().filter(h -> h.getCompiledPathSpec().matcher(query.url()).matches()).collect(Collectors.toList());
 		
 		if(holders.size() == 0) {
 			return "URL_NOT_MATCHING";
@@ -430,9 +446,9 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 	}
 	
 	@Override
-	public MethodHolder getMethodByURL(RouteQuery query) {
+	public Route getRouteByURL(RouteQuery query) {
 		return this.routes.stream()
-				.filter(h -> h.getRegex().matcher(query.url()).matches())
+				.filter(h -> h.getCompiledPathSpec().matcher(query.url()).matches())
 				.filter(h -> h.getHttpMethod().equalsIgnoreCase(query.method()))
 				.filter(h -> {
 					if(query.produces().isPresent()) {
@@ -465,7 +481,7 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 	}
 	
 	@Override
-	public MethodHolder getMethod(RouteQuery query) {
+	public Route getRoute(RouteQuery query) {
 		return this.routes.stream()
 				.filter(h -> h.getPathSpec().equals(query.url()))
 				.filter(h -> h.getHttpMethod().equalsIgnoreCase(query.method()))
@@ -493,7 +509,7 @@ public class ServletRouterImpl extends GenericServlet implements Router {
 	
 	public boolean pathExists(String path) {
 		return this.routes.stream()
-				.filter(h -> h.getRegex().matcher(path).matches())
+				.filter(h -> h.getCompiledPathSpec().matcher(path).matches())
 				.findAny()
 				.orElse(null) 
 				!= null;

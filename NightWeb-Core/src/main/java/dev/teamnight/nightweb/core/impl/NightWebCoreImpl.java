@@ -66,7 +66,6 @@ import dev.teamnight.nightweb.core.entities.SystemSetting;
 import dev.teamnight.nightweb.core.module.JavaModuleLoader;
 import dev.teamnight.nightweb.core.module.ModuleManager;
 import dev.teamnight.nightweb.core.module.ModuleManagerImpl;
-import dev.teamnight.nightweb.core.mvc.TestController;
 import dev.teamnight.nightweb.core.service.ApplicationService;
 import dev.teamnight.nightweb.core.service.ErrorLogService;
 import dev.teamnight.nightweb.core.service.GroupService;
@@ -591,7 +590,6 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		ctx.addServlet(TestServlet.class, "/test");
 		ctx.addServlet(AdminDevAutoLoginServlet.class, "/admin/autologin");
 		
-		ctx.addController(new TestController(ctx));
 		ctx.addController(new AdminController(ctx));
 	}
 	

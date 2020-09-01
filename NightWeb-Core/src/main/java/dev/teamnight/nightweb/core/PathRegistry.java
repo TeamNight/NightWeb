@@ -8,7 +8,6 @@ import java.util.Map;
 
 import javax.servlet.Filter;
 import javax.servlet.Servlet;
-import javax.servlet.http.HttpServlet;
 
 import dev.teamnight.nightweb.core.mvc.Route;
 import dev.teamnight.nightweb.core.mvc.Router;
@@ -100,26 +99,38 @@ public interface PathRegistry {
 	/**
 	 * Matches a filter using a given request uri.
 	 * 
+	 * <p>If withContextPath is true, this will match the uri with the
+	 * context path prepended.</p>
+	 * 
 	 * @param String the URI
+	 * @param withContextPath true if the uri string contains the context path
 	 * @return List of {@link javax.servlet.Filter} the filter
 	 */
-	public List<Filter> matchFilter(String uri);
+	public List<Filter> matchFilter(String uri, boolean withContextPath);
 	
 	/**
 	 * Matches a servlet using a given request uri.
 	 * 
-	 * @param String the URI
+	 * <p>If withContextPath is true, this will match the uri with the
+	 * context path prepended.</p>
+	 * 
+	 * @param uri the URI
+	 * @param withContextPath true if the uri string contains the context path
 	 * @return {@link javax.servlet.http.HttpServlet} the servlet or {@code null}
 	 */
-	public Servlet matchServlet(String uri);
+	public Servlet matchServlet(String uri, boolean withContextPath);
 	
 	/**
 	 * Matches a route using a given request uri.
 	 * 
-	 * @param String the URI
+	 * <p>If withContextPath is true, this will match the uri with the
+	 * context path prepended.</p>
+	 * 
+	 * @param uri the URI
+	 * @param withContextPath true if the uri string contains the context path
 	 * @return {@link dev.teamnight.nightweb.core.mvc.Route} the route or {@code null}
 	 */
-	public Route matchRoute(String uri);
+	public Route matchRoute(String uri, boolean withContextPath);
 	
 	/**
 	 * Adds a filter to the path registry.

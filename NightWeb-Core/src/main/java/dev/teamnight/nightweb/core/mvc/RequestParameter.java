@@ -9,7 +9,7 @@ import java.util.Objects;
  * @author Jonas
  *
  */
-public class RequestParameter {
+public final class RequestParameter {
 	
 	private boolean urlParam = false;
 	private String name;

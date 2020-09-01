@@ -13,6 +13,4 @@ module dev.teamnight.nightweb.forum {
 	opens dev.teamnight.nightweb.forum.entities;
 
 	requires transitive dev.teamnight.nightweb.core;
-	requires log4j.api;
-	requires log4j.core;
 }

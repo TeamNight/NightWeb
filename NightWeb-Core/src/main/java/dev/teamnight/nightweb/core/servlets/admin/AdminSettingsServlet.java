@@ -21,11 +21,11 @@ import com.google.common.collect.MultimapBuilder;
 
 import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
-import dev.teamnight.nightweb.core.PathParameters;
 import dev.teamnight.nightweb.core.annotations.AdminServlet;
 import dev.teamnight.nightweb.core.entities.Setting;
 import dev.teamnight.nightweb.core.entities.SystemSetting;
 import dev.teamnight.nightweb.core.service.SettingService;
+import dev.teamnight.nightweb.core.util.PathParameters;
 
 /**
  * @author Jonas

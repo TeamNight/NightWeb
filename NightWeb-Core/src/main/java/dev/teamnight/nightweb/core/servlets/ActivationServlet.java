@@ -14,12 +14,12 @@ import org.apache.commons.validator.routines.EmailValidator;
 
 import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
-import dev.teamnight.nightweb.core.PathParameters;
 import dev.teamnight.nightweb.core.entities.ActivationType;
 import dev.teamnight.nightweb.core.entities.Setting;
 import dev.teamnight.nightweb.core.entities.User;
 import dev.teamnight.nightweb.core.service.SettingService;
 import dev.teamnight.nightweb.core.service.UserService;
+import dev.teamnight.nightweb.core.util.PathParameters;
 
 /**
  * @author Jonas

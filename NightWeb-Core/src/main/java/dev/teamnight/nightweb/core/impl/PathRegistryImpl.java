@@ -74,19 +74,19 @@ public class PathRegistryImpl implements PathRegistry {
 	}
 
 	@Override
-	public List<Filter> matchFilter(String uri) {
+	public List<Filter> matchFilter(String uri, boolean withContextPath) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Servlet matchServlet(String uri) {
+	public Servlet matchServlet(String uri, boolean withContextPath) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Route matchRoute(String uri) {
+	public Route matchRoute(String uri, boolean withContextPath) {
 		// TODO Auto-generated method stub
 		return null;
 	}

@@ -9,7 +9,7 @@ import java.util.Optional;
  * @author Jonas
  *
  */
-public class RouteQuery {
+public final class RouteQuery {
 	
 	public static RouteQuery of(String path) {
 		return new RouteQuery(path);

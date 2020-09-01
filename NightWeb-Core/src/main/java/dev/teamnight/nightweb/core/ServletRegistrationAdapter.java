@@ -8,7 +8,6 @@ import java.util.List;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
-import javax.servlet.Servlet;
 import javax.servlet.http.HttpServlet;
 
 import dev.teamnight.nightweb.core.util.ServletBuilder;

@@ -68,6 +68,7 @@ public class JettyServer implements Server, HttpSessionListener, HttpSessionIdLi
 	
 	private NightWebCore core;
 	
+	@SuppressWarnings("unused")
 	private SessionFactory sessionFactory;
 	
 	public JettyServer(NightWebCore core, XmlConfiguration conf) {

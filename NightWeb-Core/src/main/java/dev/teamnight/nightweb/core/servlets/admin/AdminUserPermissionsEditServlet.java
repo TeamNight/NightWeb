@@ -18,7 +18,6 @@ import org.apache.logging.log4j.LogManager;
 
 import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
-import dev.teamnight.nightweb.core.PathParameters;
 import dev.teamnight.nightweb.core.annotations.AdminServlet;
 import dev.teamnight.nightweb.core.entities.DefaultPermission;
 import dev.teamnight.nightweb.core.entities.Permission;
@@ -29,6 +28,7 @@ import dev.teamnight.nightweb.core.entities.UserPermission;
 import dev.teamnight.nightweb.core.service.PermissionService;
 import dev.teamnight.nightweb.core.service.UserService;
 import dev.teamnight.nightweb.core.util.NodeMap;
+import dev.teamnight.nightweb.core.util.PathParameters;
 
 /**
  * @author Jonas

@@ -13,10 +13,10 @@ import org.apache.commons.validator.routines.LongValidator;
 
 import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
-import dev.teamnight.nightweb.core.PathParameters;
 import dev.teamnight.nightweb.core.annotations.AdminServlet;
 import dev.teamnight.nightweb.core.entities.User;
 import dev.teamnight.nightweb.core.service.UserService;
+import dev.teamnight.nightweb.core.util.PathParameters;
 import dev.teamnight.nightweb.core.util.StringUtil;
 
 /**

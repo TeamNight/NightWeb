@@ -22,14 +22,15 @@ import org.junit.Test;
 
 import dev.teamnight.nightweb.core.mvc.RequestParameter;
 import dev.teamnight.nightweb.core.mvc.Result;
+import dev.teamnight.nightweb.core.mvc.Route;
 import dev.teamnight.nightweb.core.mvc.RouteQuery;
 import dev.teamnight.nightweb.core.mvc.Router;
-import dev.teamnight.nightweb.core.mvc.ServletRouterImpl;
 import dev.teamnight.nightweb.core.util.StringUtil;
 import dev.teamnight.nightweb.core.Context;
 import dev.teamnight.nightweb.core.impl.ApplicationContextImpl;
+import dev.teamnight.nightweb.core.impl.MethodHolder;
+import dev.teamnight.nightweb.core.impl.ServletRouterImpl;
 import dev.teamnight.nightweb.core.mvc.Controller;
-import dev.teamnight.nightweb.core.mvc.MethodHolder;
 import dev.teamnight.nightweb.core.mvc.PathResolver;
 
 /**
@@ -71,10 +72,10 @@ public class RouterTest {
 			e.printStackTrace();
 		}
 		
-		for(MethodHolder h : router.getRoutes()) {
+		for(Route h : router.getRoutes()) {
 			System.out.println("MethodHolder --\n"
 					+ "PathSpec: " + h.getPathSpec()
-					+ "\nPattern: " + h.getRegex().pattern()
+					+ "\nPattern: " + h.getCompiledPathSpec().pattern()
 					+ "\nHTTP-Method: " + h.getHttpMethod()
 					+ "\nProduces" + h.getProduces()
 					+ "\nAccepts: " + h.getAccepts()
@@ -94,19 +95,19 @@ public class RouterTest {
 			throw new AssertionError(e);
 		}
 		
-		MethodHolder holder = router.getRoutes().get(0);
+		Route holder = router.getRoutes().get(0);
 		
-		Map<RequestParameter, String> map = resolver.resolvePathParameters(holder.getRegex(), 
+		Map<RequestParameter, String> map = resolver.resolvePathParameters(holder.getCompiledPathSpec(), 
 				holder.getParameters().keySet().toArray(new RequestParameter[holder.getParameters().size()]), 
 				"/api/test/testString");
 		
 		try {
-			Result res = holder.executeMethod(null, null, map);
+			Result res = holder.execute(null, null, map);
 			
 			System.out.println("Result: " + res.status() + " " + res.content());
 			
 			assertTrue("Result not okay", res.content().equals("test var is: testString"));
-		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+		} catch (IllegalArgumentException | ServletException e) {
 			throw new AssertionError(e);
 		}
 	}
@@ -127,8 +128,8 @@ public class RouterTest {
 		assertTrue("Controller path not /", router.getPath(c).equals("/"));
 		assertTrue("Method Path not /api/test/:test", router.getPath(c, c.getClass().getMethod("testAction", String.class)).equals("/api/test/:test"));
 		assertTrue("ControllerAndMethodName Path not /api/test/:test", router.getPath("dev.teamnight.TestController.testAction").equals("/api/test/:test"));
-		assertTrue("MetholdHolder null", router.getMethod(RouteQuery.of("/api/test/:test")) != null);
-		assertTrue("MetholdHolder null", router.getMethodByURL(RouteQuery.of("/api/test/testString")) != null);
+		assertTrue("MetholdHolder null", router.getRoute(RouteQuery.of("/api/test/:test")) != null);
+		assertTrue("MetholdHolder null", router.getRouteByURL(RouteQuery.of("/api/test/testString")) != null);
 	}
 	
 	@Test

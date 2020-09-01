@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -23,10 +24,12 @@ public interface Route {
 	
 	public String getHttpMethod();
 	
-	public String getAccepts();
+	public Optional<String> getAccepts();
 	public String getProduces();
 	
+	public Map<RequestParameter, Integer> getParameters();
+	
 	public Result execute(HttpServletRequest request, HttpServletResponse response,
-			Map<RequestParameter, String> parameters);
+			Map<RequestParameter, String> parameters) throws ServletException;
 	
 }

@@ -7,7 +7,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 import dev.teamnight.nightweb.core.Context;
-import dev.teamnight.nightweb.core.mvc.MethodHolder;
+import dev.teamnight.nightweb.core.mvc.Route;
 
 /**
  * @author Jonas
@@ -23,13 +23,13 @@ public class RouteAddedEvent implements Event {
 	private String produces;
 	private String accepts;
 	
-	public RouteAddedEvent(MethodHolder holder) {
-		this.ctx = holder.getContext();
-		this.pattern = holder.getRegex();
-		this.pathSpec = holder.getPathSpec();
-		this.httpMethod = holder.getHttpMethod();
-		this.produces = holder.getProduces();
-		this.accepts = holder.getAccepts().orElse(null);
+	public RouteAddedEvent(Context ctx, Route route) {
+		this.ctx = ctx;
+		this.pattern = route.getCompiledPathSpec();
+		this.pathSpec = route.getPathSpec();
+		this.httpMethod = route.getHttpMethod();
+		this.produces = route.getProduces();
+		this.accepts = route.getAccepts().orElse(null);
 	}
 	
 	@Override

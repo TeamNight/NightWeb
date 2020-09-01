@@ -6,6 +6,8 @@ package dev.teamnight.nightweb.core.mvc;
 import java.lang.reflect.Method;
 import java.util.List;
 
+import dev.teamnight.nightweb.core.impl.MethodHolder;
+
 /**
  * @author Jonas
  *
@@ -31,10 +33,17 @@ public interface Router {
 	public void addRoute(Method method, Controller controller);
 	
 	/**
-	 * An unmodifiable list of all registered routes
-	 * @return List<MethodHolder> the holders
+	 * Adds a route to the list of routes.
+	 * 
+	 * @param {@link dev.teamnight.nightweb.core.mvc.Route} the route
 	 */
-	public List<MethodHolder> getRoutes();
+	public void addRoute(Route route);
+	
+	/**
+	 * An unmodifiable list of all registered routes
+	 * @return List<Route> the holders
+	 */
+	public List<Route> getRoutes();
 	
 	/**
 	 * The context path of this router
@@ -86,7 +95,7 @@ public interface Router {
 	public String getPath(String controllerAndMethodName);
 	
 	/**
-	 * Returns the controller matching the url without
+	 * Returns the controller matching the url given without
 	 * the context path.
 	 * 
 	 * @param String the url
@@ -96,14 +105,14 @@ public interface Router {
 	
 	
 	/**
-	 * Returns the MethodHolders matching the url
-	 * 
+	 * Returns the Route matching the url given without
+	 * the context path.
 	 * 
 	 * @param {@link RouteQuery} a query containing information
-	 * @return {@link MethodHolder}[] the method holder
+	 * @return {@link MethodHolder} the route
 	 * @see {@link dev.teamnight.nightweb.core.mvc.SecurityFilter#matches(javax.servlet.http.HttpServletRequest, java.util.Collection)} for Route Matching rules
 	 */
-	public MethodHolder getMethodByURL(RouteQuery query);
+	public Route getRouteByURL(RouteQuery query);
 	
 	/**
 	 * Returns a controller by its pathSpec, defined
@@ -122,6 +131,6 @@ public interface Router {
 	 * @return {@link Controller} or {@code null} if no method holder is found
 	 * @see {@link dev.teamnight.nightweb.core.mvc.SecurityFilter#matches(javax.servlet.http.HttpServletRequest, java.util.Collection)} for Route Matching rules
 	 */
-	public MethodHolder getMethod(RouteQuery query);
+	public Route getRoute(RouteQuery query);
 	
 }

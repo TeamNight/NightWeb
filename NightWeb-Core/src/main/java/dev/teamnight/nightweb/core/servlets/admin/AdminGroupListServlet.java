@@ -15,11 +15,11 @@ import org.apache.commons.validator.routines.IntegerValidator;
 
 import dev.teamnight.nightweb.core.Authenticator;
 import dev.teamnight.nightweb.core.Context;
-import dev.teamnight.nightweb.core.PathParameters;
 import dev.teamnight.nightweb.core.annotations.AdminServlet;
 import dev.teamnight.nightweb.core.entities.Group;
 import dev.teamnight.nightweb.core.service.GroupService;
 import dev.teamnight.nightweb.core.template.Pagination;
+import dev.teamnight.nightweb.core.util.PathParameters;
 
 /**
  * @author Jonas
