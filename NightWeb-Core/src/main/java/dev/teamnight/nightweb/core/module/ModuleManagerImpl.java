@@ -28,6 +28,7 @@ import dev.teamnight.nightweb.core.entities.ModuleData;
 import dev.teamnight.nightweb.core.entities.ModuleMetaFile;
 import dev.teamnight.nightweb.core.exceptions.IllegalModuleIdentifierException;
 import dev.teamnight.nightweb.core.exceptions.ModuleException;
+import dev.teamnight.nightweb.core.exceptions.ModuleNotInstalledException;
 import dev.teamnight.nightweb.core.impl.ModuleContext;
 import dev.teamnight.nightweb.core.service.ModuleService;
 
@@ -303,7 +304,7 @@ public class ModuleManagerImpl implements ModuleManager {
 			ApplicationContext ctx = null;
 			try {
 				ctx = this.core.getContext(app);
-			} catch(IllegalArgumentException e) {
+			} catch(IllegalArgumentException | ModuleNotInstalledException e) {
 				e.printStackTrace();
 				return false;
 			}

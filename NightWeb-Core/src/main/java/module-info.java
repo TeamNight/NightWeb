@@ -41,5 +41,6 @@ module dev.teamnight.nightweb.core {
 	requires java.sql;
 	requires org.eclipse.jetty.http;
 	requires gson;
+	requires java.base;
 
 }

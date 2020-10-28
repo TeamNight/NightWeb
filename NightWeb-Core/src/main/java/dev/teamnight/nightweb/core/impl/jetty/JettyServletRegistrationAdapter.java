@@ -157,5 +157,12 @@ public class JettyServletRegistrationAdapter implements ServletRegistrationAdapt
 			this.pathRegistry.addFilter(mappings.get(entry.getKey()), entry.getValue());
 		}
 	}
+	
+	/**
+	 * @return the handler
+	 */
+	public ServletContextHandler getHandler() {
+		return handler;
+	}
 
 }

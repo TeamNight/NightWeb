@@ -10,6 +10,8 @@ import javax.servlet.http.HttpSession;
 
 import org.hibernate.SessionFactory;
 
+import dev.teamnight.nightweb.core.entities.ApplicationData;
+
 public interface Server {
 
 	/**
@@ -33,7 +35,7 @@ public interface Server {
 	 * @param {@link dev.teamnight.nightweb.core.ApplicationContext} the ApplicationContext
 	 * @throws IllegalArgumentException if there is already a ServletRegistrationAdapter
 	 */
-	public ServletRegistrationAdapter getServletRegistration(ApplicationContext appContext) throws IllegalArgumentException;
+	public ServletRegistrationAdapter getServletRegistration(ApplicationContext appContext, ApplicationData data) throws IllegalArgumentException;
 	
 	/**
 	 * Returns the mapping for the specified servlet in order to access the URL right, implements context path and the mapping without ending slash or *.

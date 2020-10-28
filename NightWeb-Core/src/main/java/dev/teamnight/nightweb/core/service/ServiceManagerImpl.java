@@ -18,20 +18,20 @@ public class ServiceManagerImpl implements ServiceManager {
 	
 	private SessionFactory sessionFactory;
 	
-	private Map<String, Service<?>> services = new HashMap<String, Service<?>>();
+	private Map<String, Service> services = new HashMap<String, Service>();
 	
 	public ServiceManagerImpl(SessionFactory factory) {
 		this.sessionFactory = factory;
 	}
 	
 	@Override
-	public void register(Service<?> service) {
+	public void register(Service service) {
 		LogManager.getLogger().info("Registering service >> " + service.getClass().getCanonicalName());
 		this.services.put(service.getClass().getCanonicalName(), service);
 	}
 
 	@Override
-	public void register(Class<? extends Service<?>> service) throws IllegalArgumentException {
+	public void register(Class<? extends Service> service) throws IllegalArgumentException {
 		LogManager.getLogger().info("Registering service >> " + service.getCanonicalName());
 		Constructor<?> cs;
 		
@@ -44,7 +44,7 @@ public class ServiceManagerImpl implements ServiceManager {
 		}
 		
 		try {
-			Service<?> serviceInstance = (Service<?>) cs.newInstance(this.sessionFactory);
+			DatabaseService<?> serviceInstance = (DatabaseService<?>) cs.newInstance(this.sessionFactory);
 			
 			this.services.put(service.getCanonicalName(), serviceInstance);
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
@@ -54,14 +54,14 @@ public class ServiceManagerImpl implements ServiceManager {
 	}
 
 	@Override
-	public <T extends Service<?>> T getService(Class<T> serviceClass) {
+	public <T extends Service> T getService(Class<T> serviceClass) {
 		return this.getService(serviceClass.getCanonicalName());
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public <T extends Service<?>> T getService(String canocialClassName) {
-		Service<?> service = services.get(canocialClassName);
+	public <T extends Service> T getService(String canocialClassName) {
+		Service service = services.get(canocialClassName);
 		
 		if(service != null) {
 			return (T) service;
@@ -71,7 +71,7 @@ public class ServiceManagerImpl implements ServiceManager {
 	}
 
 	@Override
-	public List<Service<?>> getServices() {
+	public List<Service> getServices() {
 		return Collections.unmodifiableList(this.services.values().stream().collect(Collectors.toList()));
 	}
 

@@ -38,7 +38,7 @@ import org.hibernate.query.Query;
  *
  * @param <T>
  */
-public abstract class AbstractService<T> implements Service<T> {
+public abstract class AbstractService<T> implements DatabaseService<T> {
 
 	private final Class<T> type;
 	private SessionFactory factory;

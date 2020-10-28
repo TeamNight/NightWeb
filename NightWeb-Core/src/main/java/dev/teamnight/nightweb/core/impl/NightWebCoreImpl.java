@@ -60,6 +60,7 @@ import dev.teamnight.nightweb.core.entities.XmlConfiguration;
 import dev.teamnight.nightweb.core.events.DefaultEventManagerImpl;
 import dev.teamnight.nightweb.core.events.EventManager;
 import dev.teamnight.nightweb.core.events.TemplatePreprocessEvent;
+import dev.teamnight.nightweb.core.exceptions.ModuleNotInstalledException;
 import dev.teamnight.nightweb.core.impl.jetty.JettyServer;
 import dev.teamnight.nightweb.core.entities.Setting.Type;
 import dev.teamnight.nightweb.core.entities.SystemSetting;
@@ -710,7 +711,7 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 	}
 
 	@Override
-	public ApplicationContext getContext(Application app) throws IllegalArgumentException {
+	public ApplicationContext getContext(Application app) throws IllegalArgumentException, ModuleNotInstalledException {
 		if(app.getIdentifier() == null) {
 			throw new IllegalArgumentException("Identifier for " + app.getClass().getCanonicalName() + " is null");
 		}
@@ -719,13 +720,13 @@ public class NightWebCoreImpl extends Application implements NightWebCore {
 		ApplicationData data = appService.getByIdentifier(app.getIdentifier());
 		
 		if(data == null) {
-			throw new IllegalArgumentException("App " + app.getIdentifier() + " is not installed");
+			throw new ModuleNotInstalledException("App " + app.getIdentifier() + " is not installed");
 		}
 		
 		ApplicationContext ctx = new ApplicationContextImpl(this.sessionFactory, this.authFactory, this.serviceMan, this.templateManager);
 		ctx.setModule(app);
 		
-		ServletRegistrationAdapter adapter = this.server.getServletRegistration(ctx);
+		ServletRegistrationAdapter adapter = this.server.getServletRegistration(ctx, data);
 		ctx.setServletRegistration(adapter);
 		
 		return ctx;

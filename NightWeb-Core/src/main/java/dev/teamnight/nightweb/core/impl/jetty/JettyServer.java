@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -46,6 +47,7 @@ import dev.teamnight.nightweb.core.NightWeb;
 import dev.teamnight.nightweb.core.NightWebCore;
 import dev.teamnight.nightweb.core.Server;
 import dev.teamnight.nightweb.core.ServletRegistrationAdapter;
+import dev.teamnight.nightweb.core.entities.ApplicationData;
 import dev.teamnight.nightweb.core.entities.XmlConfiguration;
 import dev.teamnight.nightweb.core.events.ServerStartedEvent;
 import dev.teamnight.nightweb.core.impl.NightWebCoreImpl;
@@ -230,18 +232,22 @@ public class JettyServer implements Server, HttpSessionListener, HttpSessionIdLi
 	}
 	
 	@Override
-	public ServletRegistrationAdapter getServletRegistration(ApplicationContext appContext)
+	public ServletRegistrationAdapter getServletRegistration(ApplicationContext appContext, ApplicationData data)
 			throws IllegalArgumentException {
-		if(appContext.getModuleIdentifier() == null) {
-			throw new IllegalArgumentException("Identifier for " + appContext + " is null");
+		Objects.requireNonNull(appContext, "appContext can not be null");
+		Objects.requireNonNull(appContext.getModuleIdentifier(), "appContext moduleIdentifier can not be null");
+		Objects.requireNonNull(data, "data can not be null");
+		
+		if(!appContext.getModuleIdentifier().equalsIgnoreCase(data.getIdentifier())) {
+			throw new IllegalArgumentException("appContext module identifier does not match the one of data");
 		}
 		
-		LOGGER.debug("Initialiazing ServletContextHandler with contextPath=" + appContext.getContextPath() + " for application " + appContext.getModuleIdentifier());
+		LOGGER.debug("Initialiazing ServletContextHandler with contextPath=" + data.getContextPath() + " for application " + appContext.getModuleIdentifier());
 		
 		ServletContextHandler handler = new ServletContextHandler(ServletContextHandler.SESSIONS);
 		handler.setInitParameter("org.eclipse.jetty.servlet.SessionCookie", "dev.teamnight.nightweb.core.session");
 		handler.setInitParameter("org.eclipse.jetty.servlet.SessionIdPathParameterName", "none");
-		handler.setContextPath(appContext.getContextPath());
+		handler.setContextPath(data.getContextPath());
 		handler.setErrorHandler(this.server.getErrorHandler());
 		handler.getServletHandler().setServletMappings(new ServletMapping[] {}); //to fix a bug in getServletURL
 		
@@ -255,6 +261,7 @@ public class JettyServer implements Server, HttpSessionListener, HttpSessionIdLi
 		adapter.setPathRegistry(this.core.getPathRegistry());
 		
 		this.servletRegistrationAdapters.put(appContext, adapter);
+		this.servletContextHandlers.addHandler(handler);
 		
 		return adapter;
 	}
@@ -268,24 +275,21 @@ public class JettyServer implements Server, HttpSessionListener, HttpSessionIdLi
 	public String getServletURL(String servletClass) {
 		String url = null;
 		
-		for(Handler handler : this.servletContextHandlers.getHandlers()) {
-			if(!(handler instanceof ServletContextHandler)) {
-				throw new IllegalArgumentException("Unallowed handler in ContextHandlerCollection");
-			}
-			ServletContextHandler ctxHandler = (ServletContextHandler) handler;
+		for(JettyServletRegistrationAdapter adapter : this.servletRegistrationAdapters.values()) {
+			ServletContextHandler handler = adapter.getHandler();
 			
 			//Check servlets
-			for(ServletMapping map : ctxHandler.getServletHandler().getServletMappings()) {
+			for(ServletMapping map : handler.getServletHandler().getServletMappings()) {
 				if(map.getServletName().startsWith(servletClass)) {
 					url = map.getPathSpecs()[0].replace("/*", "");
 					
-					url = StringUtil.filterURL(ctxHandler.getContextPath() + url);
+					url = StringUtil.filterURL(handler.getContextPath() + url);
 				}
 			}
 			
 			//Check Router
 			if(url == null) {
-				ServletHolder holder = ctxHandler.getServletHandler().getServlet("Router");
+				ServletHolder holder = handler.getServletHandler().getServlet("Router");
 				
 				if(holder == null ||
 						holder.getServletInstance() == null) {
